@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRequest, saveRequest } from "@/lib/store";
+import { bookContractor, notify } from "@/lib/outreach";
 
 // PATCH /api/requests/:id  body: { decision: "approve" | "decline" }
 // Landlord approves or declines the AI's suggested contractor.
@@ -16,7 +17,19 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/requests/[id]"
   }
 
   request.status = decision === "approve" ? "approved" : "declined";
-  // TODO: on approve, notify the contractor + tenant (email/SMS)
+  const saved = await saveRequest(request);
+  try {
+    if (decision === "approve") {
+      // Booking also saves the tenant's "Plumber booked ..." notification.
+      await bookContractor(saved);
+    } else {
+      await notify(`tenant:${request.tenantName}`, "Your landlord declined this repair request", {
+        kind: "status_change", requestId: id,
+      });
+    }
+  } catch (error) {
+    console.error("[outreach] Approval saved, but messaging failed", error);
+  }
 
-  return NextResponse.json(await saveRequest(request));
+  return NextResponse.json(saved);
 }
