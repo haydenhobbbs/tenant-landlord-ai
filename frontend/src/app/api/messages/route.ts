@@ -1,6 +1,8 @@
 import { NextResponse, connection, type NextRequest } from "next/server";
 import { addMessage, listMessages } from "@/lib/tenantData";
 import type { ChatMessage } from "@/lib/types";
+import { landlordIdForTenant } from "@/lib/landlord-server";
+import { notify } from "@/lib/outreach/notify";
 
 // GET  /api/messages?tenantId=abc -> the tenant ↔ landlord conversation
 // POST /api/messages body: { tenantId, senderId, senderRole, senderName, body }
@@ -28,5 +30,20 @@ export async function POST(req: Request) {
     body: body.slice(0, 2000),
     createdAt: new Date().toISOString(),
   };
-  return NextResponse.json(await addMessage(message), { status: 201 });
+  const saved = await addMessage(message);
+  try {
+    const userId = saved.senderRole === "landlord"
+      ? saved.tenantId : await landlordIdForTenant(saved.tenantId);
+    if (userId) {
+      const preview = saved.body.length > 80 ? `${saved.body.slice(0, 80)}…` : saved.body;
+      await notify({ userId }, `New message from ${saved.senderName}: ${preview}`, {
+        type: "message",
+        link: saved.senderRole === "tenant" ? "/landlord/messages" : "/tenant/messages",
+      });
+    }
+  } catch (error) {
+    // Delivery is best effort; the saved chat message must still succeed.
+    console.error("[chat] Notification failed", error);
+  }
+  return NextResponse.json(saved, { status: 201 });
 }

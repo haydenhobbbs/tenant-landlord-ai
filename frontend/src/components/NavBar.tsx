@@ -25,7 +25,7 @@ const LINKS: Record<Role, NavLink[]> = {
 export default function NavBar() {
   const { user } = useAuth();
   const pathname = usePathname();
-  const unread = useUnreadCount(user?.role === "tenant" ? user.id : null);
+  const unread = useUnreadCount(user?.id);
 
   const links = user ? LINKS[user.role] : [];
   // A request page or the report form still belongs to "Home".
@@ -75,12 +75,12 @@ export default function NavBar() {
           </ul>
         )}
 
-        {user?.role === "tenant" && (
+        {user && (
           <Link
-            href="/tenant/notifications"
+            href={`/${user.role}/notifications`}
             aria-label={unread ? `Notifications, ${unread} new` : "Notifications"}
             className={`relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl transition-colors ${
-              pathname.startsWith("/tenant/notifications")
+              pathname.startsWith(`/${user.role}/notifications`)
                 ? "bg-accent-soft text-accent-ink"
                 : "text-muted hover:bg-sunken hover:text-fg"
             }`}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Atkinson_Hyperlegible, Lora } from "next/font/google";
 import NavBar from "@/components/NavBar";
+import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 import { prefsInitScript } from "@/lib/preferences";
 import { AuthProvider } from "@/lib/auth";
 import "./globals.css";
@@ -25,6 +26,9 @@ const heading = Lora({
 export const metadata: Metadata = {
   title: "Tenly · Tenant ↔ Landlord AI",
   description: "Tenants report issues, AI finds contractors, landlords approve.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, title: "Tenly", statusBarStyle: "default" },
+  icons: { apple: "/icon-192.png" },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -35,6 +39,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="flex min-h-full flex-col bg-bg font-sans text-fg">
         <AuthProvider>
+          <ServiceWorkerRegistration />
           {/* NavBar reads the URL (usePathname), so Next 16 wants it in Suspense. */}
           <Suspense fallback={<div className="h-[69px] border-b border-line bg-surface" />}>
             <NavBar />
