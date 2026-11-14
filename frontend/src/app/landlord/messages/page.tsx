@@ -10,6 +10,7 @@
 import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { ChatThread } from "@/components/ChatThread";
+import { useMessageAlerts } from "@/components/MessageAlerts";
 import { useAuth } from "@/lib/auth";
 import { useLandlordRequests } from "@/lib/useLandlordRequests";
 
@@ -24,8 +25,10 @@ function Conversation() {
   const search = useSearchParams();
   const { user } = useAuth();
   const { requests, loading, error } = useLandlordRequests();
+  const unread = useMessageAlerts()?.threads ?? [];
+  const unreadFor = (id: string) => unread.find((t) => t.tenantId === id)?.count ?? 0;
 
-  // Everyone who has sent a request, newest first.
+  // Everyone who has sent a request.
   const tenants = useMemo(() => {
     const byId = new Map<string, TenantSummary>();
     for (const r of requests) {
@@ -37,10 +40,13 @@ function Conversation() {
     return [...byId.values()];
   }, [requests]);
 
+  // People with unread messages go to the top of the list.
+  const sorted = [...tenants].sort((a, b) => Number(unreadFor(b.id) > 0) - Number(unreadFor(a.id) > 0));
+
   const fromLink =
     search.get("tenant") ?? requests.find((r) => r.id === search.get("request"))?.tenantId ?? null;
   const [picked, setPicked] = useState<string | null>(null);
-  const tenantId = picked ?? fromLink ?? tenants[0]?.id ?? null;
+  const tenantId = picked ?? fromLink ?? sorted[0]?.id ?? null;
   const tenant = tenants.find((t) => t.id === tenantId);
 
   return (
@@ -72,8 +78,9 @@ function Conversation() {
             onChange={(e) => setPicked(e.target.value)}
             className="mt-2 w-full rounded-xl border border-line-strong bg-surface px-4 py-3 text-lg text-fg focus:border-accent-edge focus:outline-none"
           >
-            {tenants.map((t) => (
+            {sorted.map((t) => (
               <option key={t.id} value={t.id}>
+                {unreadFor(t.id) ? `● ${unreadFor(t.id)} new · ` : ""}
                 {t.name} · {t.unit}
                 {t.openRequests ? ` · ${t.openRequests} open ${t.openRequests === 1 ? "repair" : "repairs"}` : ""}
               </option>
