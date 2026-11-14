@@ -42,7 +42,15 @@ export async function searchPlaces(
       },
       body: JSON.stringify({ textQuery, pageSize: 5 }), signal: AbortSignal.timeout(10_000),
     });
-    if (!response.ok) throw new Error(`Google Places returned ${response.status}`);
+    if (!response.ok) {
+      // Google explains the problem in the body (API not enabled, billing off,
+      // key restricted...). Log it so we can see it in Vercel's logs.
+      const detail = await response.json().catch(() => null) as
+        { error?: { status?: string; message?: string } } | null;
+      throw new Error(
+        `Google Places returned ${response.status} ${detail?.error?.status ?? ""}: ${detail?.error?.message ?? "no details"}`,
+      );
+    }
     const data = await response.json() as { places?: Place[] };
     return (data.places ?? []).flatMap((p): Contractor[] => {
       const phone = normalizePhone(p.internationalPhoneNumber || p.nationalPhoneNumber || "");
