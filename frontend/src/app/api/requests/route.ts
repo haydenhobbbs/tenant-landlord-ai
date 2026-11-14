@@ -6,7 +6,7 @@ import type { MaintenanceRequest, NewRequestInput } from "@/lib/types";
 // GET /api/requests -> all requests (newest first)
 export async function GET() {
   await connection();
-  return NextResponse.json(listRequests());
+  return NextResponse.json(await listRequests());
 }
 
 // POST /api/requests -> tenant submits a new request, AI matches a contractor
@@ -27,5 +27,5 @@ export async function POST(req: Request) {
   request.quote = await findBestContractor(request);
   request.status = "awaiting_approval";
 
-  return NextResponse.json(saveRequest(request), { status: 201 });
+  return NextResponse.json(await saveRequest(request), { status: 201 });
 }

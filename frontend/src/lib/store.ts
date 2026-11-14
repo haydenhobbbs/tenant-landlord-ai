@@ -1,10 +1,63 @@
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { MaintenanceRequest } from "./types";
 
-// 🗄️ DATABASE GOES HERE
+// 🗄️ DATA STORAGE
 //
-// Temporary in-memory storage so the app works end to end today.
-// Everything resets when the dev server restarts. Swap these functions for
-// real database calls (Supabase, Postgres, etc.) without changing callers.
+// If SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are set (they are on Vercel,
+// and in your .env.local after `npx vercel env pull`), requests are saved in
+// the Supabase `requests` table. Otherwise it falls back to in-memory storage
+// so the app still runs for anyone without keys (data resets on restart).
+//
+// Table schema: see /supabase/schema.sql in the repo root.
+
+// ---------- Supabase ----------
+
+const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+const supabase: SupabaseClient | null =
+  url && key ? createClient(url, key, { auth: { persistSession: false } }) : null;
+
+interface RequestRow {
+  id: string;
+  tenant_name: string;
+  unit: string;
+  title: string;
+  description: string;
+  category: MaintenanceRequest["category"];
+  urgency: MaintenanceRequest["urgency"];
+  status: MaintenanceRequest["status"];
+  created_at: string;
+  quote: MaintenanceRequest["quote"] | null;
+}
+
+const fromRow = (r: RequestRow): MaintenanceRequest => ({
+  id: r.id,
+  tenantName: r.tenant_name,
+  unit: r.unit,
+  title: r.title,
+  description: r.description,
+  category: r.category,
+  urgency: r.urgency,
+  status: r.status,
+  createdAt: r.created_at,
+  quote: r.quote ?? undefined,
+});
+
+const toRow = (r: MaintenanceRequest): RequestRow => ({
+  id: r.id,
+  tenant_name: r.tenantName,
+  unit: r.unit,
+  title: r.title,
+  description: r.description,
+  category: r.category,
+  urgency: r.urgency,
+  status: r.status,
+  created_at: r.createdAt,
+  quote: r.quote ?? null,
+});
+
+// ---------- In-memory fallback ----------
 
 const globalStore = globalThis as unknown as { __requests?: MaintenanceRequest[] };
 
@@ -28,19 +81,39 @@ globalStore.__requests ??= [
   },
 ];
 
-const requests = globalStore.__requests;
+const memory = globalStore.__requests;
 
-export function listRequests(): MaintenanceRequest[] {
-  return [...requests].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+// ---------- Public API (same functions either way) ----------
+
+export async function listRequests(): Promise<MaintenanceRequest[]> {
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("requests")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return (data as RequestRow[]).map(fromRow);
+  }
+  return [...memory].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-export function getRequest(id: string): MaintenanceRequest | undefined {
-  return requests.find((r) => r.id === id);
+export async function getRequest(id: string): Promise<MaintenanceRequest | undefined> {
+  if (supabase) {
+    const { data, error } = await supabase.from("requests").select("*").eq("id", id).maybeSingle();
+    if (error) throw error;
+    return data ? fromRow(data as RequestRow) : undefined;
+  }
+  return memory.find((r) => r.id === id);
 }
 
-export function saveRequest(request: MaintenanceRequest): MaintenanceRequest {
-  const i = requests.findIndex((r) => r.id === request.id);
-  if (i === -1) requests.push(request);
-  else requests[i] = request;
+export async function saveRequest(request: MaintenanceRequest): Promise<MaintenanceRequest> {
+  if (supabase) {
+    const { data, error } = await supabase.from("requests").upsert(toRow(request)).select().single();
+    if (error) throw error;
+    return fromRow(data as RequestRow);
+  }
+  const i = memory.findIndex((r) => r.id === request.id);
+  if (i === -1) memory.push(request);
+  else memory[i] = request;
   return request;
 }

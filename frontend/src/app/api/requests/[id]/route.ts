@@ -7,7 +7,7 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/requests/[id]"
   const { id } = await ctx.params;
   const { decision } = (await req.json()) as { decision: "approve" | "decline" };
 
-  const request = getRequest(id);
+  const request = await getRequest(id);
   if (!request) {
     return NextResponse.json({ error: "Request not found" }, { status: 404 });
   }
@@ -18,5 +18,5 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/requests/[id]"
   request.status = decision === "approve" ? "approved" : "declined";
   // TODO: on approve, notify the contractor + tenant (email/SMS)
 
-  return NextResponse.json(saveRequest(request));
+  return NextResponse.json(await saveRequest(request));
 }
