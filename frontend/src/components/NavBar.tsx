@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Bell, FileText, Home, MessageCircle, Settings, Wrench, type LucideIcon } from "lucide-react";
 import { homeFor, useAuth, type Role } from "@/lib/auth";
 import { useUnreadCount } from "@/lib/useNotifications";
+import { UnreadBadge, useMessageAlerts } from "@/components/MessageAlerts";
 
 type NavLink = { href: string; label: string; icon: LucideIcon; exact?: boolean };
 
@@ -26,6 +27,7 @@ export default function NavBar() {
   const { user } = useAuth();
   const pathname = usePathname();
   const unread = useUnreadCount(user?.role === "tenant" ? user.id : null);
+  const unreadMessages = useMessageAlerts()?.badge ?? 0;
 
   const links = user ? LINKS[user.role] : [];
   // A request page or the report form still belongs to "Home".
@@ -66,8 +68,14 @@ export default function NavBar() {
                       active ? "bg-accent-soft text-accent-ink" : "text-muted hover:bg-sunken hover:text-fg"
                     }`}
                   >
-                    <Icon className="size-5 shrink-0" aria-hidden />
+                    <span className="relative">
+                      <Icon className="size-5 shrink-0" aria-hidden />
+                      {l.label === "Messages" && (
+                        <UnreadBadge count={unreadMessages} className="absolute -top-2 -right-3 sm:hidden" />
+                      )}
+                    </span>
                     {l.label}
+                    {l.label === "Messages" && <UnreadBadge count={unreadMessages} className="hidden sm:grid" />}
                   </Link>
                 </li>
               );

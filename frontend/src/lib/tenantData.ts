@@ -1,5 +1,5 @@
 import { isUuid, supabase as db } from "./store";
-import type { ChatMessage, Lease } from "./types";
+import type { ChatMessage, Lease, UnreadThread } from "./types";
 
 // 🗄️ STORAGE for chat messages and leases (server-side only).
 // (Notifications are Teammate C's: lib/outreach/notify.ts.)
@@ -47,7 +47,7 @@ export async function listMessages(tenantId: string): Promise<ChatMessage[]> {
   if (db && isUuid(tenantId)) {
     const { data, error } = await db
       .from("messages")
-      .select("id, tenant_id, sender_id, sender_role, sender_name, body, created_at")
+      .select("id, tenant_id, sender_id, sender_role, sender_name, body, read_at, created_at")
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: true });
     if (!notSetUp(error)) {
@@ -60,6 +60,7 @@ export async function listMessages(tenantId: string): Promise<ChatMessage[]> {
         senderName: r.sender_name ?? "",
         body: r.body,
         createdAt: r.created_at,
+        readAt: r.read_at ?? undefined,
       }));
     }
   }
@@ -84,6 +85,81 @@ export async function addMessage(m: ChatMessage): Promise<ChatMessage> {
   }
   mem.messages.push(m);
   return m;
+}
+
+// ---------- Unread messages ----------
+// "Unread" = sent by the other side and not opened yet.
+//   landlord: every tenant thread with unread tenant messages
+//   tenant:   their own thread's unread landlord messages
+
+function summarize(list: ChatMessage[], reader: ChatMessage["senderRole"]): UnreadThread[] {
+  const byTenant = new Map<string, UnreadThread>();
+  for (const m of list) {
+    if (m.senderRole === reader || m.readAt) continue;
+    const t = byTenant.get(m.tenantId);
+    if (!t) {
+      byTenant.set(m.tenantId, {
+        tenantId: m.tenantId,
+        tenantName: m.senderRole === "tenant" ? m.senderName : "",
+        count: 1,
+        latestId: m.id,
+        latestBody: m.body,
+        latestAt: m.createdAt,
+        fromName: m.senderName,
+      });
+    } else {
+      t.count += 1;
+      if (m.createdAt > t.latestAt) Object.assign(t, { latestId: m.id, latestBody: m.body, latestAt: m.createdAt, fromName: m.senderName });
+      if (m.senderRole === "tenant" && !t.tenantName) t.tenantName = m.senderName;
+    }
+  }
+  return [...byTenant.values()].sort((a, b) => b.latestAt.localeCompare(a.latestAt));
+}
+
+export async function listUnread(reader: ChatMessage["senderRole"], tenantId?: string): Promise<UnreadThread[]> {
+  const other = reader === "landlord" ? "tenant" : "landlord";
+  let fromDb: ChatMessage[] = [];
+  if (db && (!tenantId || isUuid(tenantId))) {
+    let q = db
+      .from("messages")
+      .select("id, tenant_id, sender_id, sender_role, sender_name, body, read_at, created_at")
+      .eq("sender_role", other)
+      .is("read_at", null)
+      .not("tenant_id", "is", null)
+      .limit(500);
+    if (tenantId) q = q.eq("tenant_id", tenantId);
+    const { data, error } = await q;
+    if (!notSetUp(error)) {
+      if (error) throw error;
+      fromDb = data.map((r) => ({
+        id: r.id,
+        tenantId: r.tenant_id,
+        senderId: r.sender_id,
+        senderRole: r.sender_role,
+        senderName: r.sender_name ?? "",
+        body: r.body,
+        createdAt: r.created_at,
+      }));
+    }
+  }
+  const local = mem.messages.filter((m) => !tenantId || m.tenantId === tenantId);
+  return summarize([...fromDb, ...local], reader);
+}
+
+// Called when someone opens a thread: everything the other side sent is now read.
+export async function markThreadRead(tenantId: string, reader: ChatMessage["senderRole"]): Promise<void> {
+  const other = reader === "landlord" ? "tenant" : "landlord";
+  const now = new Date().toISOString();
+  if (db && isUuid(tenantId)) {
+    const { error } = await db
+      .from("messages")
+      .update({ read_at: now })
+      .eq("tenant_id", tenantId)
+      .eq("sender_role", other)
+      .is("read_at", null);
+    if (!notSetUp(error) && error) throw error;
+  }
+  for (const m of mem.messages) if (m.tenantId === tenantId && m.senderRole === other && !m.readAt) m.readAt = now;
 }
 
 // ---------- Lease ----------

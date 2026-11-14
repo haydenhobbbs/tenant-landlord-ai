@@ -12,6 +12,7 @@ import { SendHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { inputClass } from "@/components/ui/Field";
 import type { ChatMessage } from "@/lib/types";
+import { useMessageAlerts } from "@/components/MessageAlerts";
 
 interface Props {
   tenantId: string;
@@ -30,6 +31,19 @@ export function ChatThread({ tenantId, me, otherName = "them" }: Props) {
   // Messages that were already there when the screen opened don't animate;
   // only new ones slide in.
   const [seen, setSeen] = useState<Set<string> | null>(null);
+  const alerts = useMessageAlerts();
+
+  // While this conversation is on screen: no pop-ups for it, and whatever the
+  // other side sends counts as read.
+  useEffect(() => {
+    alerts?.setOpenThread(tenantId);
+    return () => alerts?.setOpenThread(null);
+  }, [alerts, tenantId]);
+
+  const hasUnread = messages.some((m) => m.senderRole !== me.role && !m.readAt);
+  useEffect(() => {
+    if (hasUnread) void alerts?.markRead(tenantId);
+  }, [hasUnread, alerts, tenantId]);
 
   const load = useCallback(async () => {
     try {

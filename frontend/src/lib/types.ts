@@ -134,6 +134,18 @@ export interface ChatMessage {
   senderName: string;
   body: string;
   createdAt: string; // ISO date-time
+  readAt?: string; // when the other person opened it (unset = unread)
+}
+
+// Unread chat messages in one tenant's thread, for the person viewing.
+export interface UnreadThread {
+  tenantId: string;
+  tenantName: string;
+  count: number;
+  latestId: string;
+  latestBody: string;
+  latestAt: string;
+  fromName: string;
 }
 
 // What the tenant's Lease screen shows.

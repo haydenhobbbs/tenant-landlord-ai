@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Atkinson_Hyperlegible, Lora } from "next/font/google";
+import { MessageAlertsProvider } from "@/components/MessageAlerts";
 import NavBar from "@/components/NavBar";
 import { prefsInitScript } from "@/lib/preferences";
 import { AuthProvider } from "@/lib/auth";
@@ -35,11 +36,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="flex min-h-full flex-col bg-bg font-sans text-fg">
         <AuthProvider>
+          <MessageAlertsProvider>
           {/* NavBar reads the URL (usePathname), so Next 16 wants it in Suspense. */}
           <Suspense fallback={<div className="h-[69px] border-b border-line bg-surface" />}>
             <NavBar />
           </Suspense>
           <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-10 sm:px-8">{children}</main>
+          </MessageAlertsProvider>
         </AuthProvider>
       </body>
     </html>
