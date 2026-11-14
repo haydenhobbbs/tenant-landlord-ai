@@ -1,6 +1,384 @@
 @import "tailwindcss";
 
+/*
+  FixFlow shared theme. Read docs/DESIGN.md before adding colors.
+
+  - Colors are CSS variables, so light/dark and role colors swap in one place.
+  - Put data-role="tenant" | "landlord" | "contractor" on a wrapper and every
+    `accent` class inside it picks up that role's color.
+  - Dark mode: <html data-theme="dark">. Set by the script in layout.tsx and
+    the Settings screen (src/lib/preferences.ts).
+*/
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 @theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-heading);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); /* calm, decisive settle */
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-pop: cubic-bezier(0.22, 1, 0.36, 1); /* quick settle, badges only */
+
+  --animate-rise: rise 520ms var(--ease-out) both;
+  --animate-fade: fade 400ms var(--ease-out) both;
+  --animate-pop: pop 320ms var(--ease-pop) both;
+  --animate-slide-in-right: slide-in-right 380ms var(--ease-out) both;
+  --animate-slide-in-left: slide-in-left 380ms var(--ease-out) both;
+  --animate-pulse-ring: pulse-ring 2.4s var(--ease-out) infinite;
+  --animate-draw-y: draw-y 700ms var(--ease-out) both;
+  --animate-swing: swing 900ms var(--ease-out) both;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-sunken: var(--sunken);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-edge: var(--accent-edge);
+  --color-on-accent: var(--on-accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+
+  --color-tenant: var(--tenant);
+  --color-tenant-soft: var(--tenant-soft);
+  --color-tenant-ink: var(--tenant-ink);
+  --color-landlord: var(--landlord);
+  --color-landlord-soft: var(--landlord-soft);
+  --color-landlord-ink: var(--landlord-ink);
+  --color-contractor: var(--contractor);
+  --color-contractor-soft: var(--contractor-soft);
+  --color-contractor-ink: var(--contractor-ink);
+
+  --color-warn-soft: var(--warn-soft);
+  --color-warn-ink: var(--warn-ink);
+  --color-ok-soft: var(--ok-soft);
+  --color-ok-ink: var(--ok-ink);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-ink: var(--danger-ink);
+
+  --shadow-card: 0 1px 2px rgb(20 24 22 / 0.05), 0 4px 16px -4px rgb(20 24 22 / 0.08);
+  --shadow-raised: 0 2px 4px rgb(20 24 22 / 0.06), 0 12px 32px -8px rgb(20 24 22 / 0.16);
+}
+
+/* ---------- Light (default) ---------- */
+:root {
+  color-scheme: light;
+
+  --bg: #f5f4ef;
+  --surface: #ffffff;
+  --sunken: #ecebe4;
+  --fg: #1b1f1c;
+  --muted: #535a55;
+  --line: #dcdad2;
+  --line-strong: #b9b7ae;
+
+  /* Role colors */
+  --tenant: #22603f; /* forest green */
+  --tenant-hover: #1a4d32;
+  --tenant-soft: #e2efe6;
+  --tenant-ink: #174a2e;
+
+  --landlord: #8fd0f0; /* baby blue */
+  --landlord-hover: #74c2e9;
+  --landlord-edge: #4d9fc7;
+  --landlord-on: #0a2a3d;
+  --landlord-soft: #e3f2fa;
+  --landlord-ink: #1a5576;
+
+  --contractor: #8b1e2d; /* deep "navy" red */
+  --contractor-hover: #711825;
+  --contractor-soft: #f7e5e7;
+  --contractor-ink: #7a1a27;
+
+  /* Status */
+  --warn-soft: #fbefd5;
+  --warn-ink: #77490a;
+  --ok-soft: #e2efe6;
+  --ok-ink: #174a2e;
+  --danger: #b42318;
+  --danger-soft: #fbe6e3;
+  --danger-ink: #8f1d14;
+
+  /* Neutral accent (pages with no role, like home and login) */
+  --accent: var(--fg);
+  --accent-hover: #000000;
+  --accent-edge: var(--fg);
+  --on-accent: #ffffff;
+  --accent-soft: var(--sunken);
+  --accent-ink: var(--fg);
+}
+
+/* ---------- Dark ---------- */
+/* Unlayered on purpose so it beats :root. */
+:root[data-theme="dark"] {
+  & {
+    color-scheme: dark;
+
+    --bg: #111412;
+    --surface: #1a1e1b;
+    --sunken: #0c0e0d;
+    --fg: #eceee9;
+    --muted: #a5aca6;
+    --line: #2d332f;
+    --line-strong: #46504a;
+
+    --tenant: #62b98a;
+    --tenant-hover: #7cc9a0;
+    --tenant-soft: #18291f;
+    --tenant-ink: #9ed8b6;
+
+    --landlord: #9ad7f5;
+    --landlord-hover: #b5e3f9;
+    --landlord-edge: #9ad7f5;
+    --landlord-on: #0a2a3d;
+    --landlord-soft: #14273a;
+    --landlord-ink: #ade0f8;
+
+    --contractor: #e57a87;
+    --contractor-hover: #ee98a2;
+    --contractor-soft: #2e1519;
+    --contractor-ink: #f2a9b1;
+
+    --warn-soft: #2f2410;
+    --warn-ink: #f1c678;
+    --ok-soft: #18291f;
+    --ok-ink: #9ed8b6;
+    --danger: #f07a6c;
+    --danger-soft: #331815;
+    --danger-ink: #f6aca2;
+
+    --accent: var(--fg);
+    --accent-hover: #ffffff;
+    --accent-edge: var(--fg);
+    --on-accent: #111412;
+  }
+}
+
+/* ---------- Role scopes ---------- */
+[data-role="tenant"] {
+  --accent: var(--tenant);
+  --accent-hover: var(--tenant-hover);
+  --accent-edge: var(--tenant);
+  --on-accent: #ffffff;
+  --accent-soft: var(--tenant-soft);
+  --accent-ink: var(--tenant-ink);
+}
+[data-theme="dark"] [data-role="tenant"],
+[data-theme="dark"][data-role="tenant"] {
+  --on-accent: #0b1f13;
+}
+
+[data-role="landlord"] {
+  --accent: var(--landlord);
+  --accent-hover: var(--landlord-hover);
+  --accent-edge: var(--landlord-edge);
+  --on-accent: var(--landlord-on);
+  --accent-soft: var(--landlord-soft);
+  --accent-ink: var(--landlord-ink);
+}
+
+[data-role="contractor"] {
+  --accent: var(--contractor);
+  --accent-hover: var(--contractor-hover);
+  --accent-edge: var(--contractor);
+  --on-accent: #ffffff;
+  --accent-soft: var(--contractor-soft);
+  --accent-ink: var(--contractor-ink);
+}
+[data-theme="dark"] [data-role="contractor"],
+[data-theme="dark"][data-role="contractor"] {
+  --on-accent: #2a0d12;
+}
+
+/* ---------- Base ---------- */
+@layer base {
+  html {
+    /* 18px base: everything sized in rem grows with it. */
+    font-size: 112.5%;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.55;
+    font-feature-settings: "kern";
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+  }
+
+  input,
+  textarea {
+    caret-color: var(--accent-ink);
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--accent-edge);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+
+  a {
+    text-underline-offset: 0.2em;
+  }
+
+  * {
+    scrollbar-color: var(--line-strong) transparent;
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  h1,
+  h2 {
+    font-family: var(--font-heading), Georgia, serif;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  /* Respect "reduce motion": everything appears in its final state at once. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-delay: 0ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* ---------- Motion ----------
+   One calm entrance per screen (.stagger), then small, quick feedback on
+   whatever the person touches. No bouncing, no parallax, nothing that loops
+   except the "in progress" pulse. */
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes pop {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(18px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-18px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 45%, transparent); }
+  70%, 100% { box-shadow: 0 0 0 12px color-mix(in oklab, var(--accent) 0%, transparent); }
+}
+@keyframes draw-y {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+@keyframes swing {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(14deg); }
+  40% { transform: rotate(-10deg); }
+  60% { transform: rotate(6deg); }
+  80% { transform: rotate(-3deg); }
+}
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+/* Children enter one after another. Put on a page's top wrapper. */
+.stagger > * {
+  animation: var(--animate-rise);
+}
+.stagger > *:nth-child(2) { animation-delay: 70ms; }
+.stagger > *:nth-child(3) { animation-delay: 140ms; }
+.stagger > *:nth-child(4) { animation-delay: 210ms; }
+.stagger > *:nth-child(5) { animation-delay: 280ms; }
+.stagger > *:nth-child(6) { animation-delay: 350ms; }
+.stagger > *:nth-child(n + 7) { animation-delay: 420ms; }
+
+/* Loading placeholder blocks instead of "Loading…" text. */
+.skeleton {
+  border-radius: 0.75rem;
+  background: linear-gradient(90deg, var(--sunken) 0%, var(--line) 50%, var(--sunken) 100%);
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+}
+
+/* Press feedback for anything tappable that isn't a <Button>. */
+.pressable {
+  transition:
+    transform 160ms var(--ease-out),
+    box-shadow 200ms var(--ease-out),
+    background-color 160ms ease-out,
+    border-color 160ms ease-out;
+}
+.pressable:active {
+  transform: scale(0.98);
+}
+
+/* Smooth swap between light and dark. */
+html.theme-transition,
+html.theme-transition * {
+  transition:
+    background-color 350ms var(--ease-in-out),
+    border-color 350ms var(--ease-in-out),
+    color 350ms var(--ease-in-out) !important;
+}
+
+@keyframes grow-x {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+/* A finger "tapping" a button in the home page demo. */
+@keyframes press {
+  0%, 30% { transform: none; filter: none; }
+  45% { transform: scale(0.95); filter: brightness(0.92); }
+  60%, 100% { transform: none; filter: none; }
+}
+
+/* ---------- Settings: text size + movement (set on <html> by lib/preferences.ts) ---------- */
+html[data-text-size="large"] { font-size: 125%; }    /* 20px */
+html[data-text-size="xlarge"] { font-size: 137.5%; } /* 22px */
+
+html[data-motion="reduced"] *,
+html[data-motion="reduced"] *::before,
+html[data-motion="reduced"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-delay: 0ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
 }

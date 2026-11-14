@@ -1,6 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextResponse, connection } from "next/server";
 import { approveRequest, completeRequest, declineRequest } from "@/lib/pipeline";
 import { getRequest } from "@/lib/store";
+
+// GET /api/requests/:id -> one request (the tenant's repair page)
+export async function GET(_req: Request, ctx: RouteContext<"/api/requests/[id]">) {
+  await connection();
+  const { id } = await ctx.params;
+  const request = await getRequest(id);
+  if (!request) return NextResponse.json({ error: "Request not found" }, { status: 404 });
+  return NextResponse.json(request);
+}
 
 // PATCH /api/requests/:id
 //   { action: "approve", offerIndex?: number }  landlord approves a contractor
