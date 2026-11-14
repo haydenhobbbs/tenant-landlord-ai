@@ -11,12 +11,14 @@ import {
   contactContractor,
   getPreapprovedContractors,
   notify,
+  onContractorReply,
   pickChannel,
   searchContractorsOnline,
 } from "./outreach";
+import { listMessages } from "./outreach/db";
 import { saveRequest } from "./store";
 import { timeZoneFor } from "./timezone";
-import type { ContractorOffer, MaintenanceRequest } from "./types";
+import type { Contractor, ContractorOffer, MaintenanceRequest } from "./types";
 
 const MAX_CONTACTS = 3;
 
@@ -99,4 +101,45 @@ export async function declineRequest(request: MaintenanceRequest): Promise<Maint
 
 export async function completeRequest(request: MaintenanceRequest): Promise<MaintenanceRequest> {
   return saveRequest({ ...request, status: "completed" });
+}
+
+// ---------- Landlord chooses to ask more contractors ----------
+// The automatic outreach only reaches the top choice in demo mode. These let the
+// landlord have the AI email other nearby contractors (found online) one at a time.
+
+const OPEN_STATUSES = ["submitted", "finding_contractor", "contractor_suggested"];
+
+export type ExtraContractor = Contractor & { contacted: boolean };
+
+/** Contractors found online for this request, marked if the AI already contacted them. */
+export async function listExtraContractors(request: MaintenanceRequest): Promise<ExtraContractor[]> {
+  if (!request.trade) return [];
+  const [online, sent] = await Promise.all([
+    searchContractorsOnline(request.trade, request.property),
+    listMessages(request.id),
+  ]);
+  const contacted = new Set(sent.filter((m) => m.direction === "outbound").map((m) => m.contractor.id));
+  return online.map((c) => ({ ...c, contacted: contacted.has(c.id) }));
+}
+
+/** The AI writes to one more contractor. Their reply comes back through the normal reply flow. */
+export async function contactExtraContractor(
+  request: MaintenanceRequest, contractorId: string,
+): Promise<{ ok: true; contractor: Contractor } | { ok: false; error: string; status: number }> {
+  if (!OPEN_STATUSES.includes(request.status)) {
+    return { ok: false, error: `This request is already ${request.status}.`, status: 409 };
+  }
+  // Look the contractor up again on the server; never trust contact details from the browser.
+  const contractor = (await listExtraContractors(request)).find((c) => c.id === contractorId);
+  if (!contractor) return { ok: false, error: "That contractor isn't in the search results.", status: 404 };
+  if (contractor.contacted) return { ok: false, error: `${contractor.name} was already contacted.`, status: 409 };
+
+  const { contacted: _contacted, ...clean } = contractor;
+  void _contacted;
+  const channel = pickChannel(clean);
+  const message = await writeOutreachMessage(request, clean, channel);
+  const { reply } = await contactContractor(clean, message, channel, { requestId: request.id });
+  // With no email/SMS keys the contact is simulated and replies right away.
+  if (reply) await onContractorReply(request.id, clean, reply, channel);
+  return { ok: true, contractor: clean };
 }
