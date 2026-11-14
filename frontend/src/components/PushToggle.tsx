@@ -9,7 +9,19 @@ import { getBrowserSupabase } from "@/lib/supabaseBrowser";
 
 type PushState = "checking" | "off" | "on" | "blocked" | "unsupported";
 const DEVICE_USER = "tenly:push-user";
-const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+
+// Fetched from the server so the env var can be plain VAPID_PUBLIC_KEY.
+let keyRequest: Promise<string | null> | undefined;
+function loadPublicKey(): Promise<string | null> {
+  keyRequest ??= fetch("/api/push/key", { cache: "no-store" })
+    .then((res) => (res.ok ? res.json() : { publicKey: null }))
+    .then((data: { publicKey?: string | null }) => data.publicKey || null)
+    .catch(() => {
+      keyRequest = undefined;
+      return null;
+    });
+  return keyRequest;
+}
 
 function urlBase64ToUint8Array(value: string): Uint8Array<ArrayBuffer> {
   const padding = "=".repeat((4 - value.length % 4) % 4);
@@ -33,6 +45,13 @@ export function PushToggle() {
   const [iosHint, setIosHint] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [publicKey, setPublicKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void loadPublicKey().then((key) => { if (active) setPublicKey(key); });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -69,10 +88,10 @@ export function PushToggle() {
     void check();
     window.addEventListener("focus", check);
     return () => { active = false; window.removeEventListener("focus", check); };
-  }, [user]);
+  }, [user, publicKey]);
 
   async function toggle() {
-    if (!user || busy) return;
+    if (!user || busy || !publicKey) return;
     setBusy(true);
     setError("");
     try {
@@ -99,7 +118,7 @@ export function PushToggle() {
         const registration = await registerPushWorker();
         const subscription = await registration.pushManager.getSubscription()
           ?? await registration.pushManager.subscribe({
-            userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey!),
+            userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey),
           });
         await saveSubscription(user.id, subscription);
         localStorage.setItem(DEVICE_USER, user.id);

@@ -1,8 +1,12 @@
 import { sendNotification } from "web-push";
 import { deletePushSubscription, listPushSubscriptions } from "./db";
 
+export function vapidPublicKey(): string | undefined {
+  return process.env.VAPID_PUBLIC_KEY || process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || undefined;
+}
+
 export async function sendWebPush(userId: string, message: string, url: string): Promise<void> {
-  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const publicKey = vapidPublicKey();
   const privateKey = process.env.VAPID_PRIVATE_KEY;
   const subject = process.env.VAPID_SUBJECT;
   if (!publicKey || !privateKey || !subject) {
