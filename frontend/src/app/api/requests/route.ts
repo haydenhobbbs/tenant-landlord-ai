@@ -1,6 +1,7 @@
 import { NextResponse, connection, type NextRequest } from "next/server";
 import { notify } from "@/lib/outreach";
 import { savePhotos } from "@/lib/photos";
+import { addMessage } from "@/lib/tenantData";
 import { processNewRequest } from "@/lib/pipeline";
 import { listRequests, saveRequest } from "@/lib/store";
 import type { MaintenanceRequest, NewRequestInput } from "@/lib/types";
@@ -40,6 +41,24 @@ export async function POST(req: Request) {
     status: "submitted",
   } satisfies MaintenanceRequest);
 
+  // Team decision: one chat thread per tenant, and each new request shows up in it.
+  if (request.tenantId) {
+    await addMessage({
+      id: crypto.randomUUID(),
+      tenantId: request.tenantId,
+      senderId: request.tenantId,
+      senderRole: "tenant",
+      senderName: request.tenantName,
+      body: `New repair request: ${request.title}
+${request.description}`,
+      createdAt: new Date().toISOString(),
+    }).catch((err) => console.error("new-request chat message failed", err));
+  }
+  await notify(
+    { userId: request.landlordId, name: "Landlord" },
+    `${request.tenantName} (${request.unit}) sent a new repair request: ${request.title}`,
+    { type: "message", link: "/landlord/messages", requestId: id },
+  );
   await notify(
     { userId: request.tenantId, name: request.tenantName },
     `Got it. We're contacting repair people about "${request.title}".`,
