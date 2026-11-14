@@ -20,6 +20,13 @@ import type { ContractorOffer, MaintenanceRequest } from "./types";
 
 const MAX_CONTACTS = 3;
 
+// In demo mode every contractor's email or text is redirected to one teammate
+// inbox/phone, so contacting 3 would land 3 near-identical messages there.
+// Contact only the top choice (preapproved first) when a redirect is set.
+function contactLimit(): number {
+  return process.env.DEMO_CONTRACTOR_EMAIL || process.env.DEMO_CONTRACTOR_PHONE ? 1 : MAX_CONTACTS;
+}
+
 // Tenant just submitted -> AI finds + contacts contractors -> landlord gets suggestions.
 export async function processNewRequest(request: MaintenanceRequest): Promise<MaintenanceRequest> {
   const { trade, urgency } = await triageRequest(request);
@@ -32,7 +39,7 @@ export async function processNewRequest(request: MaintenanceRequest): Promise<Ma
     getPreapprovedContractors(request.landlordId, trade),
     searchContractorsOnline(trade, request.property),
   ]);
-  const candidates = [...preapproved, ...online].slice(0, MAX_CONTACTS);
+  const candidates = [...preapproved, ...online].slice(0, contactLimit());
 
   // Contact all candidates at once.
   const results = await Promise.all(
