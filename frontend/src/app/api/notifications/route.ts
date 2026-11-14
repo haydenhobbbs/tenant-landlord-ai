@@ -1,23 +1,25 @@
 import { connection, NextResponse } from "next/server";
-import { listNotifications, notify } from "@/lib/outreach/notify";
-import type { NotificationKind } from "@/lib/outreach/types";
+import { listNotifications, notify } from "@/lib/outreach";
+import type { NotificationType } from "@/lib/outreach/types";
 
 export async function GET(request: Request) {
   await connection();
-  const userId = new URL(request.url).searchParams.get("userId");
-  if (!userId?.trim()) return NextResponse.json({ error: "userId is required" }, { status: 400 });
-  return NextResponse.json(await listNotifications(userId));
+  const query = new URL(request.url).searchParams;
+  const userId = query.get("userId")?.trim();
+  const name = query.get("name")?.trim();
+  if (!userId && !name) return NextResponse.json({ error: "userId or name is required" }, { status: 400 });
+  return NextResponse.json(await listNotifications(userId || `name:${name}`));
 }
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
-  if (typeof body?.userId !== "string" || !body.userId.trim()
+  if (!body || (body.userId !== undefined && (typeof body.userId !== "string" || !body.userId.trim()))
+    || (body.name !== undefined && (typeof body.name !== "string" || !body.name.trim()))
+    || (!body.userId && !body.name)
     || typeof body.message !== "string" || !body.message.trim()
-    || (body.kind !== undefined && !["status_change", "new_message", "rent_reminder", "booking"].includes(body.kind))
-    || (body.requestId !== undefined && typeof body.requestId !== "string")) {
-    return NextResponse.json({ error: "Valid userId, message, kind and requestId are required" }, { status: 400 });
+    || (body.type !== undefined && !["message", "request_update", "rent_reminder"].includes(body.type))) {
+    return NextResponse.json({ error: "Valid userId or name, message and optional type are required" }, { status: 400 });
   }
-  return NextResponse.json(await notify(body.userId, body.message, {
-    kind: body.kind as NotificationKind | undefined, requestId: body.requestId,
-  }), { status: 201 });
+  await notify({ userId: body.userId, name: body.name }, body.message, { type: body.type as NotificationType | undefined });
+  return NextResponse.json({ ok: true }, { status: 201 });
 }

@@ -1,4 +1,4 @@
-import { onContractorReply } from "@/lib/outreach/replies";
+import { findThreadByContractor, onContractorReply } from "@/lib/outreach";
 import { validTwilioSignature } from "@/lib/outreach/twilio";
 
 export async function POST(request: Request) {
@@ -10,7 +10,8 @@ export async function POST(request: Request) {
   const contractorId = query.get("contractorId");
   const speech = form.get("SpeechResult");
   if (requestId && contractorId && typeof speech === "string" && speech.trim()) {
-    await onContractorReply(requestId, contractorId, speech, { channel: "call" });
+    const thread = await findThreadByContractor(requestId, contractorId);
+    if (thread) await onContractorReply(requestId, thread.contractor, speech, "call");
   }
   return new Response("<Response><Say>Thank you, goodbye.</Say></Response>", {
     headers: { "Content-Type": "text/xml" },

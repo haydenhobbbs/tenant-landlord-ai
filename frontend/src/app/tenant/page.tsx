@@ -6,9 +6,8 @@ import { useState } from "react";
 import { StatusBadge, UrgencyBadge } from "@/components/StatusBadge";
 import { useRequests } from "@/lib/useRequests";
 import { formatDateTime } from "@/lib/format";
-import type { Category, NewRequestInput, Urgency } from "@/lib/types";
+import type { NewRequestInput, Urgency } from "@/lib/types";
 
-const CATEGORIES: Category[] = ["plumbing", "electrical", "hvac", "appliance", "pest", "other"];
 const URGENCIES: Urgency[] = ["low", "medium", "high", "emergency"];
 
 const EMPTY_FORM: NewRequestInput = {
@@ -16,8 +15,9 @@ const EMPTY_FORM: NewRequestInput = {
   unit: "",
   title: "",
   description: "",
-  category: "plumbing",
   urgency: "medium",
+  // TODO (Teammate A): once login exists, get this from the tenant's property.
+  property: { address: "", city: "", state: "", zip: "" },
 };
 
 export default function TenantPage() {
@@ -40,7 +40,7 @@ export default function TenantPage() {
       setError((await res.json()).error ?? "Something went wrong");
       return;
     }
-    setForm({ ...EMPTY_FORM, tenantName: form.tenantName, unit: form.unit });
+    setForm({ ...EMPTY_FORM, tenantName: form.tenantName, unit: form.unit, property: form.property });
     load();
   }
 
@@ -80,12 +80,14 @@ export default function TenantPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <label className="space-y-1 text-sm font-medium">
-              <span>Type</span>
-              <select className={`${inputClass} capitalize`} value={form.category} onChange={(e) => update("category", e.target.value as Category)}>
-                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <span>City</span>
+              <input className={inputClass} value={form.property?.city ?? ""} onChange={(e) => update("property", { ...form.property!, city: e.target.value })} placeholder="Austin" required />
             </label>
             <label className="space-y-1 text-sm font-medium">
+              <span>State</span>
+              <input className={`${inputClass} uppercase`} maxLength={2} value={form.property?.state ?? ""} onChange={(e) => update("property", { ...form.property!, state: e.target.value.toUpperCase() })} placeholder="TX" required />
+            </label>
+            <label className="col-span-2 space-y-1 text-sm font-medium">
               <span>Urgency</span>
               <select className={`${inputClass} capitalize`} value={form.urgency} onChange={(e) => update("urgency", e.target.value as Urgency)}>
                 {URGENCIES.map((u) => <option key={u} value={u}>{u}</option>)}
@@ -116,14 +118,14 @@ export default function TenantPage() {
               <p className="mt-1 text-sm text-slate-600">{r.description}</p>
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                 <UrgencyBadge urgency={r.urgency} />
-                <span className="capitalize">{r.category}</span>
+                {r.trade && <span className="capitalize">{r.trade}</span>}
                 <span>·</span>
                 <span>{r.unit}</span>
-                {r.status === "approved" && r.quote && (
+                {r.status === "scheduled" && r.selected && (
                   <>
                     <span>·</span>
                     <span className="font-medium text-emerald-700">
-                      {r.quote.contractor.name} coming {formatDateTime(r.quote.availableAt)}
+                      {r.selected.contractor.name} coming{r.scheduledAt ? ` ${formatDateTime(r.scheduledAt)}` : ""}
                     </span>
                   </>
                 )}

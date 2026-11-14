@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { findThreadByAddress, onContractorReply } from "@/lib/outreach/replies";
+import { findThreadByAddress, onContractorReply } from "@/lib/outreach";
 
 const object = (value: unknown): Record<string, unknown> | undefined =>
   value !== null && typeof value === "object" && !Array.isArray(value)
@@ -24,6 +24,6 @@ export async function POST(request: Request) {
   const text = lines.join("\n").trim();
   const thread = await findThreadByAddress(from);
   if (!thread || !text) return NextResponse.json({ ok: true, ignored: true });
-  const parsed = await onContractorReply(thread.requestId, thread.contractorId, text, { thread, channel: "email" });
-  return NextResponse.json({ ok: true, parsed });
+  await onContractorReply(thread.requestId, thread.contractor, text, "email");
+  return NextResponse.json({ ok: true });
 }

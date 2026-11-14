@@ -1,19 +1,24 @@
 import { getNotifications, readNotification, saveNotification } from "./db";
 import { sendEmail, sendSms } from "./send";
-import type { AppNotification, NotifyOptions } from "./types";
+import type { NotifyOptions } from "./types";
 
-export async function notify(userId: string, message: string, opts: NotifyOptions = {}): Promise<AppNotification> {
-  const notification = await saveNotification({
-    id: crypto.randomUUID(), userId, message, kind: opts.kind ?? "new_message",
-    requestId: opts.requestId, read: false, createdAt: new Date().toISOString(),
-  });
-  const context = { requestId: opts.requestId };
-  await Promise.all([
-    opts.sms ? sendSms(opts.sms, message, context) : undefined,
-    opts.email ? sendEmail({ to: opts.email, subject: "Home maintenance update", text: message }, context) : undefined,
-  ]);
-  return notification;
+export async function notify(
+  to: { userId?: string; name?: string; phone?: string; email?: string },
+  message: string, opts: NotifyOptions = {},
+): Promise<void> {
+  try {
+    await saveNotification({
+      id: crypto.randomUUID(), userId: to.userId ?? `name:${to.name}`, message,
+      type: opts.type ?? "request_update", link: opts.link, read: false, createdAt: new Date().toISOString(),
+    });
+    await Promise.all([
+      to.phone ? sendSms(to.phone, message) : undefined,
+      to.email ? sendEmail({ to: to.email, subject: "Home maintenance update", text: message }) : undefined,
+    ]);
+  } catch (error) {
+    console.error("[outreach] Notification failed", error);
+  }
 }
 
 export const listNotifications = getNotifications;
-export const markRead = readNotification;
+export const markNotificationRead = readNotification;

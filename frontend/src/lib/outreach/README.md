@@ -1,138 +1,111 @@
 # Contractor outreach and notifications
 
-Server-side helpers for the App Router. Import the public hand-offs from
-`@/lib/outreach`. No provider SDKs or new npm dependencies are needed.
+Import the public API from `@/lib/outreach`. It uses the shared types in
+`lib/types.ts` and the existing `lib/store.ts` Supabase client.
 
-## Functions
+- `getPreapprovedContractors(landlordId, trade)` reads the landlord's trusted list; empty/error/no database uses main's demo list.
+- `searchContractorsOnline(trade, property)` searches Google Places near the street/city/state/zip, city/state, or without a location. Missing key/provider failure uses main's demo list. `general` searches for handyman.
+- `pickChannel(contractor)` chooses SMS when a phone exists, email otherwise.
+- `contactContractor(contractor, message, channel, { requestId }?)` returns `{ sent, reply }`. Configured providers return `reply: null`; no keys return an immediate demo reply. A leading `Subject: ...` email line becomes the subject.
+- `onContractorReply(requestId, contractor, text, channel)` logs inbound text, uses `readContractorReply` and `rankOffers` from `lib/ai`, replaces that contractor's suggestion, and notifies the landlord. Approved/scheduled/completed/declined requests only log replies.
+- `findThreadByAddress(from)` resolves the newest outbound destination; `findThreadByContractor(requestId, contractorId)` resolves voice callbacks.
+- `confirmBooking(request, offer)` sends contractor SMS and email with `job.ics`. Missing/invalid availability defaults to 24 hours from now. Tenant notification belongs to `pipeline.approveRequest`.
+- `buildIcs(options)` creates a UTC calendar invite with escaped text and folded UTF-8 lines.
+- `notify({ userId?, name?, phone?, email? }, message, { type?, link?, requestId? }?)` saves an in-app notification and optionally sends SMS/email. Types: `message`, `request_update` (default), `rent_reminder`. Booking and notifications catch failures.
+- `listNotifications(key)` reads notifications by user ID, or `name:Landlord` / `name:Jordan Lee` when no user ID exists. `markNotificationRead(id)` sets `read_at`.
+- `sendRentReminders(tenants)` notifies tenants whose rent is due within three days; returns one void result per reminder so the cron route can report a count.
 
-| Function | Behavior |
-| --- | --- |
-| `searchContractorsOnline(trade, location, limit = 5)` | Google Places Text Search (New); returns online contractors with phone numbers, ratings, websites and addresses. Without a key, returns up to three clearly identified demo records. Provider failures log an error and return `[]`. |
-| `contactContractor(contractor, message, channel, { requestId, subject?, attachments? })` | Sends SMS, a speech-gathering call, or email. Saves contractor details and the actual destination in the message log. Returns `{ ok, channel, to, dryRun, providerId?, error? }`. |
-| `onContractorReply(requestId, contractorId, text)` | Saves the inbound reply, parses availability/time/price, updates the request quote and `awaiting_approval` status, and notifies `landlord`. |
-| `interpretReply(text)` | Tries the optional `@/lib/ai/readReply` module's `readContractorReply(text)` export; falls back to a local parser if absent, invalid, or failing. |
-| `findThreadByAddress(from)` | Finds the latest outbound contractor message to the normalized phone or email, including demo destinations. When several jobs share a demo address, the newest thread wins. |
-| `bookContractor(request, contractor?)` | Looks up contractor email/details from the log, emails a base64 `job.ics` attachment when an email address is known, texts confirmation, and creates a tenant booking notification. |
-| `notify(userId, message, opts?)` | Saves a notification, optionally sends SMS/email using `opts.sms`/`opts.email`. Options also include `kind` and `requestId`. |
-| `listNotifications(userId)`, `markRead(id)` | Read a user's notifications newest first; mark one read (returns `undefined` if absent). |
-| `buildIcs({ uid, title, description, location, start, durationMinutes?, organizerEmail?, attendeeEmail? })` | Produces an RFC 5545 meeting request with UTC times, CRLF, escaped text, and UTF-8 safe folding at 75 octets. Default duration: 120 minutes. |
-| `sendRentReminders(tenants)` | Notifies tenants whose ISO `rentDue` is between now and three days from now; returns the saved notifications. `FAKE_TENANTS` includes Jordan due in two days and Sam due in seven. |
-| `sendSms`, `sendEmail`, `placeCall` (from `./send`) | Fetch-based low-level senders, each logging outbound attempts. Email supports base64 attachments. Provider errors return `ok: false` instead of throwing. |
-
-`db.ts` follows the existing store's Supabase-or-`globalThis` memory pattern.
-Run `supabase/outreach.sql` in Supabase before using persistent outreach storage.
-It creates `outreach_messages` and `notifications` with RLS enabled; server code
-uses the service role. Memory is process-local and resets on restart; it is also
-used as a fallback if these database tables are unavailable.
-
-Without provider credentials, sends log `[outreach dry run]`, save an outbound
-message, and return `dryRun: true`. A configured provider that rejects a request
-returns `ok: false`, records the attempt, and does not silently pretend to send.
-Search returns an array (its existing hand-off has no `dryRun` field).
+Uses the existing outreach_log and notifications tables in schema.sql - no extra SQL.
+Outbound rows store the actual destination in `contractor._to`; it is stripped
+from the returned Contractor. Lookups read the newest 200 rows and match normalized
+phone/email addresses, including demo overrides. With multiple jobs sent to the
+same phone/inbox, SMS/email replies belong to the newest outbound job. Voice
+callbacks identify the request and contractor explicitly. Outbound logging needs
+both `requestId` and a contractor; profile notifications do not create contractor
+threads. Storage failures use memory, which lasts only for the current process.
+UUID user IDs use Supabase notifications; other IDs and name keys use memory.
 
 ## Environment
 
-Put secrets in `frontend/.env.local` (never commit them). Names are in `.env.example`.
+Set server variables in `frontend/.env.local` (never commit secrets):
 
-- `GOOGLE_PLACES_API_KEY`: enable Places API (New) with Text Search access.
-- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`: all three are needed for real SMS/calls. The phone number must support the selected channel. Setting the auth token alone still turns on inbound signature validation.
-- `RESEND_API_KEY`, `RESEND_FROM_EMAIL`: both are needed for real email; use a verified sender.
-- `RESEND_REPLY_TO`: optional reply inbox; configure its inbound webhook to forward replies here.
-- `APP_BASE_URL`: public origin, e.g. `https://your-app.example`; used for voice callbacks and signature validation behind a proxy. For local curl tests use `http://localhost:3100`.
-- `DEMO_CONTRACTOR_PHONE`: optional override for contractor SMS/calls, e.g. your verified teammate's number in `+1...` format. The log stores this real destination so their reply maps back to the job.
-- `DEMO_CONTRACTOR_EMAIL`: optional override for contractor email and the calendar attendee.
-- `CRON_SECRET`: optional bearer token for rent reminders.
-- Existing storage variables: `SUPABASE_URL` (or `NEXT_PUBLIC_SUPABASE_URL`) and `SUPABASE_SERVICE_ROLE_KEY`.
+| Variable | Purpose |
+| --- | --- |
+| `GOOGLE_PLACES_API_KEY` | Places API (New), Text Search enabled |
+| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER` | All three enable real SMS/calls; sender must support the channel |
+| `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | Both enable real email; use a verified sender |
+| `RESEND_REPLY_TO` | Optional reply inbox / invite organizer |
+| `APP_BASE_URL` | Public origin for voice callbacks and Twilio signature validation |
+| `DEMO_CONTRACTOR_PHONE`, `DEMO_CONTRACTOR_EMAIL` | Override contractor destinations and calendar attendee; profile notifications keep their own destinations |
+| `CRON_SECRET` | Optional bearer token required by rent cron |
+| `SUPABASE_URL` (or `NEXT_PUBLIC_SUPABASE_URL`), `SUPABASE_SERVICE_ROLE_KEY` | Existing storage client; omit for memory |
+| `ANTHROPIC_API_KEY` | Shared AI parser/ranker; omit for its fallback rules |
 
-Demo overrides apply only to contractor outreach, not tenant/landlord notification
-destinations. US ten digit phone numbers gain `+1`. Google Places does not provide
-email addresses: supply `contractor.email` or `DEMO_CONTRACTOR_EMAIL` to deliver the
-calendar invitation. SMS omits the email claim when no invite was sent.
+Phone numbers use E.164; US ten-digit numbers gain `+1`. Google Places supplies
+phone numbers, not emails. Supply contractor email or `DEMO_CONTRACTOR_EMAIL`
+for a real calendar delivery; a configured provider without a destination fails
+without throwing. Missing channel credentials logs a dry run. No-key booking
+logs both SMS and email, including the `.ics` attachment filename.
 
-The local parser recognizes `$180`, `Tue 10am`, `tomorrow 3pm`, and `10:30am`.
-Relative dates and display times use the server's local timezone (`TZ`); set it to
-the property's zone for a live demo. Dates in the calendar are always UTC.
-Unclear/missing values preserve an existing quote for the same contractor, or use
-price `0`/empty availability for landlord review. Unavailable replies notify the
-landlord explicitly. Approval without a usable time sends an approval notification
-with scheduling pending instead of an invalid calendar invite.
+## Webhooks
 
-## Twilio and email webhook setup
+Use a public HTTPS origin matching `APP_BASE_URL` (deployment or tunnel).
 
-Use an HTTPS deployment or tunnel whose public origin matches `APP_BASE_URL`.
-On your Twilio number, set **Messaging → A message comes in** to:
+- Twilio Messaging → A message comes in: `POST https://your-app.example/api/webhooks/twilio/sms`
+- Voice speech callback (set in outgoing TwiML): `POST https://your-app.example/api/webhooks/twilio/voice?requestId=REQUEST_ID&contractorId=CONTRACTOR_ID`
+- Email forwarding: `POST https://your-app.example/api/webhooks/email`
 
-```text
-POST https://your-app.example/api/webhooks/twilio/sms
-```
+Twilio callbacks validate `X-Twilio-Signature` when `TWILIO_AUTH_TOKEN` is set,
+including the full public URL/query and sorted form parameters. Invalid signatures
+return 403. Unknown senders get empty TwiML. Unsigned curl tests need no auth token.
 
-Outbound calls provide TwiML directly and gather speech with a POST callback to:
+Email accepts either `{ "from": "Plumber <plumber@example.com>", "text": "Yes, Tue 10am, $180" }`
+or `{ "type": "email.received", "data": { "from": "plumber@example.com", "text": "Yes, Tue 10am, $180" } }`.
+It removes quoted `>` lines and stops at `On ... wrote:`. Configure a forwarding
+adapter to include the message text if the inbound provider sends only an email ID.
+The endpoint follows the app's unauthenticated hackathon route conventions.
 
-```text
-https://your-app.example/api/webhooks/twilio/voice?requestId=seed-1&contractorId=c1
-```
+**Twilio trial accounts can only text/call verified destination numbers.** Use
+`DEMO_CONTRACTOR_PHONE` with a verified teammate's phone. Set Resend credentials
+and `DEMO_CONTRACTOR_EMAIL` to receive a calendar invitation.
 
-Both Twilio webhooks check `X-Twilio-Signature` when `TWILIO_AUTH_TOKEN` is set.
-The signature covers the full public URL (including query string) and sorted
-form parameters. Unsigned local curl calls require an unset token; invalid
-signatures return 403. Unknown SMS senders get `<Response/>`.
+## Curl demo
 
-For inbound email, forward JSON to `POST /api/webhooks/email`. Supported shapes:
-
-```json
-{"from":"Plumber <plumber@example.com>","text":"Tue 10am, $180"}
-{"type":"email.received","data":{"from":"plumber@example.com","text":"Tue 10am, $180","subject":"Re: Repair"}}
-```
-
-Quoted `>` lines and everything following `On ... wrote:` are stripped. This
-endpoint expects message text in the JSON; if your inbound service sends only
-an email ID, configure a forwarding adapter that includes the text.
-
-## Local demo with curl
-
-For a completely local dry run, leave all provider/storage keys and demo overrides
-unset (including in `.env.local`), then run:
+For a local dry run, leave provider, AI, storage keys and demo overrides unset,
+then `cd frontend && npm run dev -- -p 3100`. Keep all requests in one process.
 
 ```sh
-cd frontend
-npm run dev -- -p 3100
-```
+curl -sS 'http://localhost:3100/api/outreach/search?trade=plumbing&city=Austin&state=TX&address=123%20Main%20St&zip=78701'
 
-In another terminal:
+# Create a job: returns status contractor_suggested and ranked suggestions.
+curl -sS http://localhost:3100/api/requests \
+  -H 'Content-Type: application/json' \
+  -d '{"tenantName":"Jordan Lee","unit":"2B","title":"Kitchen sink leak","description":"Pipe leaking under sink","urgency":"medium","property":{"address":"123 Main St","city":"Austin","state":"TX","zip":"78701"}}'
 
-```sh
-curl -sS 'http://localhost:3100/api/outreach/search?trade=plumbing&location=Austin,%20TX'
-
+# Substitute the returned request ID below.
 curl -sS http://localhost:3100/api/outreach/contact \
   -H 'Content-Type: application/json' \
-  -d '{"contractor":{"id":"c1","name":"Rapid Rooter Plumbing","trade":"plumbing","rating":4.8,"phone":"(555) 201-3344","source":"preapproved"},"message":"Can you fix a kitchen sink leak? Please reply with availability and price.","channel":"sms","requestId":"seed-1"}'
+  -d '{"contractor":{"id":"pre-1","name":"Rapid Rooter Plumbing","trade":"plumbing","phone":"+15552013344","source":"preapproved"},"message":"Can you repair a sink leak? Reply with availability and price.","channel":"sms","requestId":"REQUEST_ID"}'
 
 curl -sS http://localhost:3100/api/webhooks/twilio/sms \
-  --data-urlencode 'From=+15552013344' --data-urlencode 'Body=Tue 10am, $180'
+  --data-urlencode 'From=+15552013344' \
+  --data-urlencode 'Body=No problem, Tue 10am works, $180'
 
 curl -sS http://localhost:3100/api/requests
+# Check the desired suggestion index in that response (default is zero).
+curl -sS -X PATCH http://localhost:3100/api/requests/REQUEST_ID \
+  -H 'Content-Type: application/json' -d '{"action":"approve","offerIndex":0}'
 
-curl -sS -X PATCH http://localhost:3100/api/requests/seed-1 \
-  -H 'Content-Type: application/json' -d '{"decision":"approve"}'
-
-curl -sS 'http://localhost:3100/api/notifications?userId=tenant:Jordan%20Lee'
-curl -sS 'http://localhost:3100/api/notifications?userId=landlord'
+curl -sS 'http://localhost:3100/api/notifications?name=Landlord'
+curl -sS 'http://localhost:3100/api/notifications?name=Jordan%20Lee'
+curl -sS http://localhost:3100/api/notifications \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Landlord","message":"Hello","type":"message"}'
+curl -sS -X PATCH http://localhost:3100/api/notifications/NOTIFICATION_ID
 curl -sS http://localhost:3100/api/cron/rent-reminders
-# If CRON_SECRET is set, also pass -H "Authorization: Bearer $CRON_SECRET".
+# With CRON_SECRET, add -H "Authorization: Bearer $CRON_SECRET".
 ```
 
-Expect three demo contractors, an SMS result with `dryRun:true`, TwiML thanks,
-`seed-1` with quote price `180` and the reply in `aiReason`, then a notification
-such as `Plumber booked Tue 10am` and one rent reminder. Notifications can also be
-created with `POST /api/notifications` using `{ "userId": "landlord", "message": "Hello", "kind": "new_message", "requestId": "seed-1" }`,
-and marked read with `PATCH /api/notifications/<id>`.
-
-For a live phone demo, set the three Twilio variables, `APP_BASE_URL` to the public
-tunnel/deployment, and `DEMO_CONTRACTOR_PHONE` to the teammate's phone. Text any
-contractor through the app, reply from that phone, then approve as landlord.
-**Twilio trial accounts can only text verified numbers.** For a real calendar
-invite, also set Resend credentials and `DEMO_CONTRACTOR_EMAIL`.
-
-The demo cron endpoint sends a reminder on each invocation; it does not deduplicate
-scheduled runs. These routes follow the app's existing unauthenticated hackathon
-conventions; `userId` is an application label, not an authentication check.
+The demo cron sends one near-due fake tenant reminder on every invocation; it does
+not deduplicate scheduled runs. Shared AI fallback parsing is intentionally
+simple; live AI resolves offered dates using its configured time zone.

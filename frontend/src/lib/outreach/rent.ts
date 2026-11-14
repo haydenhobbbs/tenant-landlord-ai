@@ -1,5 +1,4 @@
 import { notify } from "./notify";
-import type { AppNotification } from "./types";
 
 export interface RentTenant {
   userId: string;
@@ -10,15 +9,15 @@ export interface RentTenant {
   amount: number;
 }
 
-export async function sendRentReminders(tenants: RentTenant[]): Promise<AppNotification[]> {
+export async function sendRentReminders(tenants: RentTenant[]): Promise<void[]> {
   const now = Date.now();
   const due = tenants.filter((tenant) => {
     const untilDue = Date.parse(tenant.rentDue) - now;
     return untilDue >= 0 && untilDue <= 3 * 24 * 60 * 60 * 1000;
   });
-  return Promise.all(due.map((tenant) => notify(tenant.userId,
+  return Promise.all(due.map((tenant) => notify(tenant,
     `Hi ${tenant.name}, your rent of $${tenant.amount.toLocaleString("en-US")} is due ${new Date(tenant.rentDue).toLocaleDateString("en-US", { month: "short", day: "numeric" })}.`,
-    { kind: "rent_reminder", sms: tenant.phone, email: tenant.email })));
+    { type: "rent_reminder" })));
 }
 
 export const FAKE_TENANTS: RentTenant[] = [

@@ -1,96 +1,92 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { MaintenanceRequest } from "./types";
 
-// 🗄️ DATA STORAGE
+// 🗄️ DATA STORAGE for repair requests
 //
-// If SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are set (they are on Vercel,
-// and in your .env.local after `npx vercel env pull`), requests are saved in
-// the Supabase `requests` table. Otherwise it falls back to in-memory storage
-// so the app still runs for anyone without keys (data resets on restart).
-//
-// Table schema: see /supabase/schema.sql in the repo root.
+// If SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are set (they are on Vercel),
+// requests are saved in the Supabase `requests` table. Otherwise it falls back
+// to in-memory storage so the app still runs for anyone without keys.
+// Full schema: /supabase/schema.sql
 
 // ---------- Supabase ----------
 
 const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const supabase: SupabaseClient | null =
+export const supabase: SupabaseClient | null =
   url && key ? createClient(url, key, { auth: { persistSession: false } }) : null;
 
 interface RequestRow {
   id: string;
+  created_at: string;
+  tenant_id: string | null;
+  landlord_id: string | null;
   tenant_name: string;
   unit: string;
+  property: MaintenanceRequest["property"] | null;
   title: string;
   description: string;
-  category: MaintenanceRequest["category"];
+  photos: string[];
+  trade: MaintenanceRequest["trade"] | null;
   urgency: MaintenanceRequest["urgency"];
+  suggestions: MaintenanceRequest["suggestions"];
+  legal_guidance: MaintenanceRequest["legalGuidance"] | null;
+  selected: MaintenanceRequest["selected"] | null;
+  scheduled_at: string | null;
   status: MaintenanceRequest["status"];
-  created_at: string;
-  quote: MaintenanceRequest["quote"] | null;
 }
 
 const fromRow = (r: RequestRow): MaintenanceRequest => ({
   id: r.id,
+  createdAt: r.created_at,
+  tenantId: r.tenant_id ?? undefined,
+  landlordId: r.landlord_id ?? undefined,
   tenantName: r.tenant_name,
   unit: r.unit,
+  property: r.property ?? undefined,
   title: r.title,
   description: r.description,
-  category: r.category,
+  photos: r.photos ?? [],
+  trade: r.trade ?? undefined,
   urgency: r.urgency,
+  suggestions: r.suggestions ?? [],
+  legalGuidance: r.legal_guidance ?? undefined,
+  selected: r.selected ?? undefined,
+  scheduledAt: r.scheduled_at ?? undefined,
   status: r.status,
-  createdAt: r.created_at,
-  quote: r.quote ?? undefined,
 });
 
 const toRow = (r: MaintenanceRequest): RequestRow => ({
   id: r.id,
+  created_at: r.createdAt,
+  tenant_id: r.tenantId ?? null,
+  landlord_id: r.landlordId ?? null,
   tenant_name: r.tenantName,
   unit: r.unit,
+  property: r.property ?? null,
   title: r.title,
   description: r.description,
-  category: r.category,
+  photos: r.photos,
+  trade: r.trade ?? null,
   urgency: r.urgency,
+  suggestions: r.suggestions,
+  legal_guidance: r.legalGuidance ?? null,
+  selected: r.selected ?? null,
+  scheduled_at: r.scheduledAt ?? null,
   status: r.status,
-  created_at: r.createdAt,
-  quote: r.quote ?? null,
 });
 
 // ---------- In-memory fallback ----------
 
 const globalStore = globalThis as unknown as { __requests?: MaintenanceRequest[] };
-
-globalStore.__requests ??= [
-  {
-    id: "seed-1",
-    tenantName: "Jordan Lee",
-    unit: "Apt 3B",
-    title: "Kitchen sink leaking",
-    description: "Water drips from under the sink whenever it runs. There's a puddle in the cabinet.",
-    category: "plumbing",
-    urgency: "high",
-    status: "awaiting_approval",
-    createdAt: new Date().toISOString(),
-    quote: {
-      contractor: { id: "c1", name: "Rapid Rooter Plumbing", trade: "plumbing", rating: 4.8, phone: "(555) 201-3344" },
-      price: 260,
-      availableAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      aiReason: "Rapid Rooter Plumbing handles plumbing jobs, is rated 4.8★, and is free soonest.",
-    },
-  },
-];
-
+globalStore.__requests ??= [];
 const memory = globalStore.__requests;
 
 // ---------- Public API (same functions either way) ----------
 
 export async function listRequests(): Promise<MaintenanceRequest[]> {
   if (supabase) {
-    const { data, error } = await supabase
-      .from("requests")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const { data, error } = await supabase.from("requests").select("*").order("created_at", { ascending: false });
     if (error) throw error;
     return (data as RequestRow[]).map(fromRow);
   }

@@ -1,61 +1,32 @@
-import type { Category, MaintenanceRequest } from "@/lib/types";
-import { contactContractor } from "./contact";
-import { listMessages } from "./db";
+import type { ContractorOffer, MaintenanceRequest } from "../types";
 import { buildIcs } from "./ics";
-import { notify } from "./notify";
-import type { ContactResult, OutreachContractor } from "./types";
+import { sendEmail, sendSms } from "./send";
 
-const tradeWords: Record<Category, string> = {
-  plumbing: "Plumber", electrical: "Electrician", hvac: "HVAC tech",
-  appliance: "Appliance tech", pest: "Pest control", other: "Handyman",
-};
-
-export function shortTime(iso: string): string {
-  const date = new Date(iso);
-  if (!Number.isFinite(date.getTime())) return "time to be confirmed";
-  const day = date.toLocaleDateString("en-US", { weekday: "short" });
-  const time = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
-    .replace(":00", "").replace(/\s/g, "").toLowerCase();
-  return `${day} ${time}`;
-}
-
-export async function bookContractor(
-  request: MaintenanceRequest, contractor?: OutreachContractor,
-): Promise<{ sms?: ContactResult; email?: ContactResult }> {
-  const quote = request.quote;
-  if (!quote || !Number.isFinite(Date.parse(quote.availableAt))) {
-    await notify(`tenant:${request.tenantName}`, "Your landlord approved this repair request. Scheduling is pending.", {
-      kind: "status_change", requestId: request.id,
-    });
-    return {};
-  }
-  contractor ??= (await listMessages()).find((m) => m.requestId === request.id
-    && m.contractorId === quote.contractor.id && m.contractor)?.contractor
-    ?? { ...quote.contractor, source: "preapproved" };
-  const time = shortTime(quote.availableAt);
-  const formatted = new Date(quote.availableAt).toLocaleString("en-US", {
-    weekday: "short", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short",
-  });
-  const confirmation = `Confirmed: ${request.title} at ${request.unit}, ${formatted}, $${quote.price}.`;
-  let email: ContactResult | undefined;
-  const attendeeEmail = process.env.DEMO_CONTRACTOR_EMAIL || contractor.email;
-  if (attendeeEmail) {
+export async function confirmBooking(request: MaintenanceRequest, offer: ContractorOffer): Promise<void> {
+  try {
+    const contractor = offer.contractor;
+    const start = offer.availableAt && Number.isFinite(Date.parse(offer.availableAt))
+      ? new Date(offer.availableAt) : new Date(Date.now() + 86_400_000);
+    const location = [request.property?.address, request.property?.city,
+      [request.property?.state, request.property?.zip].filter(Boolean).join(" "), request.unit].filter(Boolean).join(", ");
+    const confirmation = `Confirmed: ${request.title} at ${location}, ${start.toLocaleString("en-US")}${offer.price !== undefined ? `, $${offer.price}` : ""}.`;
+    const attendeeEmail = process.env.DEMO_CONTRACTOR_EMAIL || contractor.email || "";
     const ics = buildIcs({
-      uid: `${request.id}@tenant-landlord-ai`, title: request.title,
-      description: `${request.description}\nTenant: ${request.tenantName}\nAgreed price: $${quote.price}`,
-      location: request.unit, start: new Date(quote.availableAt),
+      uid: `${request.id}@tenant-landlord-ai`, title: `${request.title} — ${request.unit}`,
+      description: `${request.description}\n${offer.price !== undefined ? `Agreed price: $${offer.price}` : ""}`,
+      location, start,
       organizerEmail: process.env.RESEND_REPLY_TO || process.env.RESEND_FROM_EMAIL?.match(/<?([^\s<>]+@[^\s<>]+)>?$/)?.[1],
-      attendeeEmail,
+      attendeeEmail: attendeeEmail || undefined,
     });
-    email = await contactContractor(contractor, `${confirmation}\nCalendar invite attached.`, "email", {
-      requestId: request.id, subject: `Confirmed: ${request.title}`,
-      attachments: [{ filename: "job.ics", content: Buffer.from(ics, "utf8").toString("base64") }],
-    });
+    const context = { requestId: request.id, contractor };
+    await Promise.all([
+      sendSms(process.env.DEMO_CONTRACTOR_PHONE || contractor.phone || "", confirmation, context),
+      sendEmail({
+        to: attendeeEmail, subject: `Confirmed: ${request.title}`, text: `${confirmation}\nCalendar invite attached.`,
+        attachments: [{ filename: "job.ics", content: Buffer.from(ics, "utf8").toString("base64") }],
+      }, context),
+    ]);
+  } catch (error) {
+    console.error("[outreach] Booking confirmation failed", error);
   }
-  const sms = await contactContractor(contractor,
-    `${confirmation}${email?.ok ? " Calendar invite sent by email." : ""}`, "sms", { requestId: request.id });
-  await notify(`tenant:${request.tenantName}`, `${tradeWords[request.category]} booked ${time}`, {
-    kind: "booking", requestId: request.id,
-  });
-  return { sms, email };
 }

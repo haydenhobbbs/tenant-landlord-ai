@@ -1,11 +1,12 @@
-import type { Category, OutreachContractor } from "./types";
+import type { Contractor, MaintenanceRequest, Trade } from "../types";
+import { normalizePhone } from "./send";
 
-const searchTerms: Record<Category, string> = {
+const searchTerms: Record<Trade, string> = {
   plumbing: "plumber", electrical: "electrician", hvac: "HVAC repair",
-  appliance: "appliance repair", pest: "pest control", other: "handyman",
+  appliance: "appliance repair", pest: "pest control", general: "handyman",
 };
 
-export function isCategory(value: unknown): value is Category {
+export function isTrade(value: unknown): value is Trade {
   return typeof value === "string" && Object.hasOwn(searchTerms, value);
 }
 
@@ -15,50 +16,44 @@ interface Place {
   nationalPhoneNumber?: string;
   internationalPhoneNumber?: string;
   rating?: number;
-  userRatingCount?: number;
   websiteUri?: string;
-  formattedAddress?: string;
 }
 
-export async function searchContractorsOnline(
-  trade: Category, location: string, limit = 5,
-): Promise<OutreachContractor[]> {
-  if (!isCategory(trade)) return [];
-  const count = Number.isFinite(limit) ? Math.max(0, Math.min(20, Math.floor(limit))) : 5;
-  if (!count) return [];
-  const term = searchTerms[trade];
+/** null means the provider is unavailable; the public API supplies demo results. */
+export async function searchPlaces(
+  trade: Trade, location: MaintenanceRequest["property"],
+): Promise<Contractor[] | null> {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+  const cityState = [location?.city, location?.state].filter(Boolean).join(", ");
+  const where = location?.address
+    ? [location.address, [cityState, location.zip].filter(Boolean).join(" ")].filter(Boolean).join(", ")
+    : cityState;
+  const textQuery = `${searchTerms[trade]}${where ? ` near ${where}` : ""}`;
   if (!apiKey) {
-    console.log("[outreach dry run] Google Places search", { trade, location });
-    const label = term.charAt(0).toUpperCase() + term.slice(1);
-    return ["Lone Star", "Neighborhood", "Reliable Home"].slice(0, count).map((name, i) => ({
-      id: `demo_${trade}_${i + 1}`, name: `${name} ${label}`, trade,
-      phone: `+1512555010${i + 1}`, rating: [4.8, 4.7, 4.6][i], reviewCount: [126, 84, 63][i],
-      address: location, source: "online",
-    }));
+    console.log("[outreach dry run] Google Places search", { textQuery });
+    return null;
   }
   try {
     const response = await fetch("https://places.googleapis.com/v1/places:searchText", {
       method: "POST",
       headers: {
         "Content-Type": "application/json", "X-Goog-Api-Key": apiKey,
-        "X-Goog-FieldMask": "places.id,places.displayName,places.nationalPhoneNumber,places.internationalPhoneNumber,places.rating,places.userRatingCount,places.websiteUri,places.formattedAddress",
+        "X-Goog-FieldMask": "places.id,places.displayName,places.nationalPhoneNumber,places.internationalPhoneNumber,places.rating,places.websiteUri",
       },
-      body: JSON.stringify({ textQuery: `${term} near ${location}`, pageSize: count }),
-      signal: AbortSignal.timeout(10_000),
+      body: JSON.stringify({ textQuery, pageSize: 5 }), signal: AbortSignal.timeout(10_000),
     });
     if (!response.ok) throw new Error(`Google Places returned ${response.status}`);
     const data = await response.json() as { places?: Place[] };
-    return (data.places ?? []).filter((p) => p.id && (p.internationalPhoneNumber || p.nationalPhoneNumber))
-      .slice(0, count).map((p) => ({
-        id: `gp_${p.id}`, placeId: p.id, name: p.displayName?.text ?? `${labelFor(trade)} contractor`,
-        trade, phone: (p.internationalPhoneNumber || p.nationalPhoneNumber)!, rating: p.rating ?? 0,
-        reviewCount: p.userRatingCount, website: p.websiteUri, address: p.formattedAddress, source: "online",
-      }));
+    return (data.places ?? []).flatMap((p): Contractor[] => {
+      const phone = normalizePhone(p.internationalPhoneNumber || p.nationalPhoneNumber || "");
+      if (!p.id || !/^\+[1-9]\d{7,14}$/.test(phone)) return [];
+      return [{
+        id: `gp_${p.id}`, name: p.displayName?.text ?? `${searchTerms[trade]} contractor`,
+        trade, phone, rating: p.rating, website: p.websiteUri, source: "online",
+      }];
+    });
   } catch (error) {
     console.error("[outreach] Contractor search failed", error);
-    return [];
+    return null;
   }
 }
-
-function labelFor(trade: Category) { return searchTerms[trade]; }

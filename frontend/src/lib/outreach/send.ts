@@ -1,10 +1,10 @@
 import { saveMessage } from "./db";
-import type { Channel, ContactResult, OutreachContractor } from "./types";
+import type { Contractor } from "../types";
+import type { Channel, ContactResult } from "./types";
 
 export interface SendContext {
   requestId?: string;
-  contractorId?: string;
-  contractor?: OutreachContractor;
+  contractor?: Contractor;
 }
 
 export interface EmailInput {
@@ -48,11 +48,12 @@ async function deliver(
       result = { ok: false, channel, to, dryRun: false, error: message };
     }
   }
-  await saveMessage({
-    id: crypto.randomUUID(), requestId: context.requestId ?? "", contractorId: context.contractorId ?? "",
-    contractor: context.contractor, direction: "outbound", channel, to, from, body,
-    createdAt: new Date().toISOString(),
-  });
+  if (context.requestId && context.contractor) {
+    await saveMessage({
+      id: crypto.randomUUID(), requestId: context.requestId, contractor: context.contractor,
+      direction: "outbound", channel, to, body, createdAt: new Date().toISOString(),
+    });
+  }
   return result;
 }
 
@@ -89,6 +90,9 @@ export async function placeCall(to: string, twiml: string, context: SendContext 
 
 export async function sendEmail(input: EmailInput, context: SendContext = {}): Promise<ContactResult> {
   const from = process.env.RESEND_FROM_EMAIL ?? "";
+  if (!(process.env.RESEND_API_KEY && from) && input.attachments?.length) {
+    console.log("[outreach dry run] email attachments", input.attachments.map((a) => a.filename));
+  }
   return deliver("email", input.to, input.text, from, !!(process.env.RESEND_API_KEY && from), async () => {
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",

@@ -1,4 +1,4 @@
-import { findThreadByAddress, onContractorReply } from "@/lib/outreach/replies";
+import { findThreadByAddress, onContractorReply } from "@/lib/outreach";
 import { validTwilioSignature } from "@/lib/outreach/twilio";
 
 export async function POST(request: Request) {
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   if (!thread || typeof body !== "string" || !body.trim()) {
     return new Response("<Response/>", { headers: { "Content-Type": "text/xml" } });
   }
-  await onContractorReply(thread.requestId, thread.contractorId, body, { thread, channel: "sms" });
+  await onContractorReply(thread.requestId, thread.contractor, body, "sms");
   return new Response("<Response><Message>Thanks! We'll confirm with the landlord shortly.</Message></Response>", {
     headers: { "Content-Type": "text/xml" },
   });

@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { connection, NextResponse } from "next/server";
-import { FAKE_TENANTS, sendRentReminders } from "@/lib/outreach/rent";
+import { FAKE_TENANTS, sendRentReminders } from "@/lib/outreach";
 
 export async function GET(request: Request) {
   await connection();
@@ -11,6 +11,6 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
   }
-  const notifications = await sendRentReminders(FAKE_TENANTS);
-  return NextResponse.json({ ok: true, count: notifications.length, notifications });
+  const reminders = await sendRentReminders(FAKE_TENANTS);
+  return NextResponse.json({ ok: true, count: reminders.length });
 }
