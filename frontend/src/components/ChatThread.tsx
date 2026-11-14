@@ -31,19 +31,29 @@ export function ChatThread({ tenantId, me, otherName = "them" }: Props) {
   // Messages that were already there when the screen opened don't animate;
   // only new ones slide in.
   const [seen, setSeen] = useState<Set<string> | null>(null);
+  // Only the two stable helpers, never the whole context value: that object
+  // changes whenever the unread list does, and depending on it made the
+  // "mark read" effect re-run in a loop (Maximum update depth exceeded).
   const alerts = useMessageAlerts();
+  const markRead = alerts?.markRead;
+  const setOpenThread = alerts?.setOpenThread;
 
   // While this conversation is on screen: no pop-ups for it, and whatever the
   // other side sends counts as read.
   useEffect(() => {
-    alerts?.setOpenThread(tenantId);
-    return () => alerts?.setOpenThread(null);
-  }, [alerts, tenantId]);
+    setOpenThread?.(tenantId);
+    return () => setOpenThread?.(null);
+  }, [setOpenThread, tenantId]);
 
   const hasUnread = messages.some((m) => m.senderRole !== me.role && !m.readAt);
   useEffect(() => {
-    if (hasUnread) void alerts?.markRead(tenantId);
-  }, [hasUnread, alerts, tenantId]);
+    if (!hasUnread) return;
+    // Mark them read here too, so this doesn't fire again before the next refresh.
+    const now = new Date().toISOString();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time local update when unread messages appear
+    setMessages((list) => list.map((m) => (m.senderRole !== me.role && !m.readAt ? { ...m, readAt: now } : m)));
+    void markRead?.(tenantId);
+  }, [hasUnread, markRead, tenantId, me.role]);
 
   const load = useCallback(async () => {
     try {

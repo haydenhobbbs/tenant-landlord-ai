@@ -87,8 +87,9 @@ export function MessageAlertsProvider({ children }: { children: ReactNode }) {
   const markRead = useCallback(
     async (tenantId: string) => {
       if (!role) return;
-      setThreads((list) => list.filter((t) => t.tenantId !== tenantId));
-      setToasts((list) => list.filter((t) => t.tenantId !== tenantId));
+      // Keep the same array when nothing changes, so nothing re-renders for no reason.
+      setThreads((list) => (list.some((t) => t.tenantId === tenantId) ? list.filter((t) => t.tenantId !== tenantId) : list));
+      setToasts((list) => (list.some((t) => t.tenantId === tenantId) ? list.filter((t) => t.tenantId !== tenantId) : list));
       await fetch("/api/messages/read", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
