@@ -10,7 +10,7 @@ Demo accounts cannot receive phone notifications.
 ## Deploy setup
 
 1. In the project's Supabase SQL editor, run [`supabase/push_subscriptions.sql`](../supabase/push_subscriptions.sql). The table has row level security enabled and no browser access policy; only the existing server service-role client reads and writes it.
-2. Generate one VAPID key pair with `npx web-push generate-vapid-keys`. Keep the private key secret. Do not commit either key to the repository or share the private key in a group chat.
+2. Anthony already has a VAPID key pair in his ignored `frontend/.env.local`. He should share both values directly with Hayden through a private channel. If you generate a replacement pair with `npx web-push generate-vapid-keys`, use both values from that new pair together in Vercel and update the local file to match. Keep the private key secret; never commit it or share it in a group chat.
 3. In Hayden's Vercel project, set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT=https://tenant-landlord-ai.vercel.app` for Production, then redeploy. The existing `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, and `NEXT_PUBLIC_SUPABASE_ANON_KEY` must also be set. Keep the same VAPID pair across later deployments; rotating it requires devices to subscribe again.
 4. Merge and deploy both the logo PR and this branch. On iPhone, open the HTTPS site in Safari, add it to the Home Screen, and launch that icon. On Android, use Chrome's **Install app** or **Add to Home screen**. In Tenly, sign in with a real account, open Settings, and tap **Turn on notifications**. Approve the browser permission prompt.
 
