@@ -32,10 +32,10 @@ export default function RequestDetailPage() {
 
   return <div className="space-y-6">
     <Link href="/landlord" className="inline-block rounded-lg py-2 font-semibold text-sky-800 underline underline-offset-2 focus-visible:outline focus-visible:outline-2 dark:text-sky-200">← Back to requests</Link>
-    {loading && <p role="status" className="rounded-xl border p-5">Loading request…</p>}
+    {loading && !request && <p role="status" className="rounded-xl border p-5">Loading request…</p>}
     {error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-5"><p>{error}</p><button type="button" onClick={() => void reload()} className="mt-2 font-semibold underline">Try again</button></div>}
     {!loading && !error && !request && <div className="rounded-xl border p-5"><h1 className="text-2xl font-bold">Request not found</h1><p className="mt-2">It may have been removed or the link may be incorrect.</p></div>}
-    {request && !loading && <>
+    {request && <>
       <header className="space-y-3"><div className="flex flex-wrap items-center gap-3"><h1 className="text-3xl font-bold">{request.title}</h1><UrgencyBadge urgency={request.urgency} /><StatusBadge status={request.status} /></div><p className="text-slate-600 dark:text-slate-300">{request.tenantName} · {request.unit} · Reported {formatDateTime(request.createdAt)}</p></header>
       {notice && <p role="status" className="rounded-xl bg-emerald-50 p-4 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">{notice}</p>}{actionError && <p role="alert" className="rounded-xl bg-rose-50 p-4 text-rose-900 dark:bg-rose-950 dark:text-rose-100">{actionError}</p>}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-900"><h2 className="text-xl font-bold">What the tenant reported</h2><p className="mt-3 whitespace-pre-wrap text-base leading-7">{request.description}</p><h3 className="mt-6 font-semibold">Photos</h3>{photos.length ? <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">{photos.map((photo, index) => <a key={`${photo}-${index}`} href={photo} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl border border-slate-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-700"><Image unoptimized src={photo} alt={`Repair photo ${index + 1}`} width={360} height={360} className="aspect-square w-full object-cover" /></a>)}</div> : <p className="mt-2 text-slate-600 dark:text-slate-300">No photos attached to this request.</p>}</section>
