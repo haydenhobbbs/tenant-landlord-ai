@@ -41,7 +41,7 @@ How the pieces connect: the tenant form calls `POST /api/requests`, which calls 
 
 API keys go in `frontend/.env.local`, which git ignores. Copy `.env.example` to get started.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how we work together.
+See [docs/TEAM_PLAN.md](docs/TEAM_PLAN.md) for who does what, and [CONTRIBUTING.md](CONTRIBUTING.md) for how we work together.
 
 ## Team
 
