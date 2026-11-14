@@ -2,6 +2,13 @@ import type { ContactChannel, Contractor } from "../types";
 import { escapeXml, placeCall, sendEmail, sendSms } from "./send";
 import type { ContactResult } from "./types";
 
+export const jobTag = (requestId: string, contractorId: string) => `[Job ${requestId}~${contractorId}]`;
+
+export function parseJobTag(subject: string): { requestId: string; contractorId: string } | undefined {
+  const match = subject.match(/\[Job ([^\s~\]]+)~([^\s\]]+)\]/);
+  return match ? { requestId: match[1], contractorId: match[2] } : undefined;
+}
+
 export async function contactContractor(
   contractor: Contractor, message: string, channel: ContactChannel, opts: { requestId?: string } = {},
 ): Promise<{ sent: boolean; reply: string | null }> {
@@ -9,9 +16,12 @@ export async function contactContractor(
   let result: ContactResult;
   if (channel === "email") {
     const subjectLine = message.match(/^Subject:[ \t]*([^\r\n]*)\r?\n?/i);
+    // The tag survives "Re:" replies, so the email webhook can match a reply to
+    // the right request and contractor even when every demo email goes to one inbox.
+    const tag = opts.requestId ? ` ${jobTag(opts.requestId, contractor.id)}` : "";
     result = await sendEmail({
       to: process.env.DEMO_CONTRACTOR_EMAIL || contractor.email || "",
-      subject: subjectLine?.[1].trim() || "Maintenance job inquiry",
+      subject: `${subjectLine?.[1].trim() || "Maintenance job inquiry"}${tag}`,
       text: subjectLine ? message.slice(subjectLine[0].length).trimStart() : message,
     }, context);
   } else {

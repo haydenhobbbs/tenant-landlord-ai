@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { findThreadByAddress, onContractorReply } from "@/lib/outreach";
+import { findThreadByAddress, findThreadByContractor, onContractorReply } from "@/lib/outreach";
+import { parseJobTag } from "@/lib/outreach/contact";
 
 const object = (value: unknown): Record<string, unknown> | undefined =>
   value !== null && typeof value === "object" && !Array.isArray(value)
@@ -22,7 +23,12 @@ export async function POST(request: Request) {
     if (!/^\s*>/.test(line)) lines.push(line);
   }
   const text = lines.join("\n").trim();
-  const thread = await findThreadByAddress(from);
+  // Prefer the [Job …] tag in the subject; fall back to the sender's address.
+  const tagged = typeof data.subject === "string" ? parseJobTag(data.subject) : undefined;
+  const taggedThread = tagged && await findThreadByContractor(tagged.requestId, tagged.contractorId);
+  const thread = taggedThread
+    ? { requestId: taggedThread.requestId, contractor: taggedThread.contractor }
+    : await findThreadByAddress(from);
   if (!thread || !text) return NextResponse.json({ ok: true, ignored: true });
   await onContractorReply(thread.requestId, thread.contractor, text, "email");
   return NextResponse.json({ ok: true });

@@ -21,7 +21,10 @@ export async function confirmBooking(request: MaintenanceRequest, offer: Contrac
     });
     const context = { requestId: request.id, contractor };
     await Promise.all([
-      sendSms(process.env.DEMO_CONTRACTOR_PHONE || contractor.phone || "", confirmation, context),
+      // Text only when SMS outreach is switched on; email always carries the invite.
+      process.env.OUTREACH_CHANNEL?.trim().toLowerCase() === "sms"
+        ? sendSms(process.env.DEMO_CONTRACTOR_PHONE || contractor.phone || "", confirmation, context)
+        : undefined,
       sendEmail({
         to: attendeeEmail, subject: `Confirmed: ${request.title}`, text: `${confirmation}\nCalendar invite attached.`,
         attachments: [{ filename: "job.ics", content: Buffer.from(ics, "utf8").toString("base64") }],

@@ -57,6 +57,15 @@ export async function searchContractorsOnline(
   return matches.length ? matches : FAKE_ONLINE.filter((c) => c.trade === "general");
 }
 
+// Email by default (free, no carrier registration). Set OUTREACH_CHANNEL=call
+// or OUTREACH_CHANNEL=sms to phone contractors that have a number instead.
+export function outreachChannel(): ContactChannel {
+  const preferred = process.env.OUTREACH_CHANNEL?.trim().toLowerCase();
+  return preferred === "call" || preferred === "sms" ? preferred : "email";
+}
+
 export function pickChannel(contractor: Contractor): ContactChannel {
-  return contractor.phone ? "sms" : "email";
+  const preferred = outreachChannel();
+  if (preferred !== "email" && (process.env.DEMO_CONTRACTOR_PHONE || contractor.phone)) return preferred;
+  return "email";
 }
