@@ -6,6 +6,7 @@ import { UnreadBadge, useMessageAlerts } from "@/components/MessageAlerts";
 
 const links = [
   { href: "/landlord", label: "Requests" },
+  { href: "/landlord/properties", label: "Properties & invites" },
   { href: "/landlord/contractors", label: "Trusted contractors" },
   { href: "/landlord/messages", label: "Messages" },
   { href: "/landlord/lease", label: "Lease" },

@@ -125,11 +125,14 @@ const memory = globalStore.__requests;
 
 // ---------- Public API (same functions either way) ----------
 
-// Pass a tenantId to get only that tenant's requests.
-export async function listRequests(filter?: { tenantId?: string }): Promise<MaintenanceRequest[]> {
+// Pass a tenantId to get only that tenant's requests, or a landlordId for only
+// requests from that landlord's tenants (set when a tenant joins via invite code).
+export async function listRequests(filter?: { tenantId?: string; landlordId?: string }): Promise<MaintenanceRequest[]> {
+  if (supabase && filter?.landlordId && !isUuid(filter.landlordId)) return [];
   if (supabase && (!filter?.tenantId || isUuid(filter.tenantId))) {
     let query = supabase.from("requests").select("*").order("created_at", { ascending: false });
     if (filter?.tenantId) query = query.eq("tenant_id", filter.tenantId);
+    if (filter?.landlordId) query = query.eq("landlord_id", filter.landlordId);
     const { data, error } = await query;
     if (error) throw error;
     return (data as RequestRow[]).map(fromRow);

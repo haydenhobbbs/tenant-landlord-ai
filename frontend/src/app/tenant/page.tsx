@@ -5,6 +5,7 @@
 import Link from "next/link";
 import { ChevronRight, ImageIcon, Plus } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
+import { HomeLink } from "@/components/tenant/HomeLink";
 import { useAuth } from "@/lib/auth";
 import { formatDateTime } from "@/lib/format";
 import { useRequests } from "@/lib/useRequests";
@@ -40,6 +41,8 @@ export default function TenantHome() {
           </Link>
         </div>
       </section>
+
+      <HomeLink />
 
       <section aria-labelledby="repairs" className="space-y-4">
         <h2 id="repairs" className="text-2xl font-bold">Your repairs</h2>
