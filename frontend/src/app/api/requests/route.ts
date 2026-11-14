@@ -1,5 +1,5 @@
 import { NextResponse, connection } from "next/server";
-import { findBestContractor } from "@/lib/ai";
+import { processNewRequest } from "@/lib/pipeline";
 import { listRequests, saveRequest } from "@/lib/store";
 import type { MaintenanceRequest, NewRequestInput } from "@/lib/types";
 
@@ -9,7 +9,7 @@ export async function GET() {
   return NextResponse.json(await listRequests());
 }
 
-// POST /api/requests -> tenant submits a new request, AI matches a contractor
+// POST /api/requests -> tenant submits; AI finds + contacts contractors
 export async function POST(req: Request) {
   const input = (await req.json()) as NewRequestInput;
 
@@ -17,15 +17,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Title and description are required" }, { status: 400 });
   }
 
-  const request: MaintenanceRequest = {
-    ...input,
+  const request = await saveRequest({
     id: crypto.randomUUID(),
-    status: "submitted",
     createdAt: new Date().toISOString(),
-  };
+    tenantName: input.tenantName,
+    unit: input.unit,
+    property: input.property,
+    title: input.title,
+    description: input.description,
+    photos: input.photos ?? [],
+    urgency: input.urgency,
+    suggestions: [],
+    status: "submitted",
+  } satisfies MaintenanceRequest);
 
-  request.quote = await findBestContractor(request);
-  request.status = "awaiting_approval";
-
-  return NextResponse.json(await saveRequest(request), { status: 201 });
+  return NextResponse.json(await processNewRequest(request), { status: 201 });
 }

@@ -60,14 +60,30 @@ completed              Job done
 
 These are the points where our code connects. Agree on the inputs and outputs in the first hour, then everyone builds against fake versions until the real ones land.
 
-| Function | Owner | Used by |
-|---|---|---|
-| `searchContractorsOnline(trade, location)` → contractors | C | Hayden |
-| `contactContractor(contractor, message, channel)` | C | Hayden |
-| `onContractorReply(requestId, contractorId, text)` | C calls it → Hayden's AI reads it | — |
-| `findBestContractor(request)` → suggestions | Hayden | B (landlord page) |
-| `getLegalGuidance(request, location)` → checklist | Hayden | B (landlord page) |
-| `notify(userId, message)` | C | Everyone |
+Each function already exists with a **fake version that works today**. Replace the inside, keep the name, inputs, and outputs.
+
+**Hayden: `frontend/src/lib/ai/index.ts`**
+| Function | What it does |
+|---|---|
+| `triageRequest(request)` | Tenant message → trade + urgency |
+| `writeOutreachMessage(request, contractor, channel)` | What the AI texts or emails a contractor |
+| `readContractorReply(text)` | "Yes, Tue 10am, $180" → available, time, price |
+| `rankOffers(request, offers)` | Order contractors best-first, with a "why" |
+| `getLegalGuidance(request)` | Location + issue → checklist for the landlord |
+
+**Teammate C: `frontend/src/lib/outreach/index.ts`**
+| Function | What it does |
+|---|---|
+| `getPreapprovedContractors(landlordId, trade)` | Landlord's trusted list (Supabase `contractors` table) |
+| `searchContractorsOnline(trade, location)` | Google Places / Yelp search |
+| `contactContractor(contractor, message, channel)` | Send SMS / email / call (Twilio, Resend) |
+| `confirmBooking(request, offer)` | Confirmation + calendar invite after approval |
+| `notify(to, message)` | Notify a tenant or landlord |
+
+**The flow that connects them: `frontend/src/lib/pipeline.ts`.** You usually don't need to edit it.
+
+**Database: `supabase/schema.sql`** (already created in Supabase): `profiles` (role = tenant or landlord), `properties`, `leases`, `contractors`, `requests`, `outreach_log`, `messages`, `notifications`. New users get a profile automatically. Pass the role at sign-up:
+`supabase.auth.signUp({ email, password, options: { data: { role: "landlord", name: "Pat" } } })`
 
 `frontend/src/lib/types.ts` is shared. **Ask in the group chat before changing it.**
 

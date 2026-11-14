@@ -25,19 +25,19 @@ Then open http://localhost:3000.
 
 ## Where things live
 
-| What | File | Who works here |
-|------|------|----------------|
-| Home page | `frontend/src/app/page.tsx` | |
-| Tenant page (submit + track requests) | `frontend/src/app/tenant/page.tsx` | Tenant UI |
-| Landlord page (approve / decline) | `frontend/src/app/landlord/page.tsx` | Landlord UI |
-| AI that picks a contractor (currently fake) | `frontend/src/lib/ai.ts` | AI agent |
-| Contractor list (currently fake) | `frontend/src/lib/contractors.ts` | Contractor search |
-| Data storage (in memory, resets on restart) | `frontend/src/lib/store.ts` | Backend |
-| API: list + create requests | `frontend/src/app/api/requests/route.ts` | Backend |
-| API: approve / decline | `frontend/src/app/api/requests/[id]/route.ts` | Backend |
-| Shared data types | `frontend/src/lib/types.ts` | Everyone, so change it carefully |
+| What | File | Owner |
+|------|------|-------|
+| Shared data types | `frontend/src/lib/types.ts` | Everyone (ask first) |
+| AI brain (fake for now) | `frontend/src/lib/ai/index.ts` | Hayden |
+| Contractor search, texts/emails/calls, notifications (fake for now) | `frontend/src/lib/outreach/index.ts` | Teammate C |
+| The repair flow that connects them | `frontend/src/lib/pipeline.ts` | — |
+| Tenant page | `frontend/src/app/tenant/page.tsx` | Teammate A |
+| Landlord page | `frontend/src/app/landlord/page.tsx` | Teammate B |
+| Saving requests (Supabase, in-memory without keys) | `frontend/src/lib/store.ts` | — |
+| API | `frontend/src/app/api/requests/` | — |
+| Database tables | `supabase/schema.sql` | — |
 
-How the pieces connect: the tenant form calls `POST /api/requests`, which calls `findBestContractor()` in `ai.ts`, then saves the request. The landlord page lists requests and calls `PATCH /api/requests/:id` to approve or decline them.
+Flow: `submitted → finding_contractor → contractor_suggested → landlord_approved → scheduled → completed`. See [docs/TEAM_PLAN.md](docs/TEAM_PLAN.md).
 
 API keys go in `frontend/.env.local`, which git ignores. Copy `.env.example` to get started.
 
