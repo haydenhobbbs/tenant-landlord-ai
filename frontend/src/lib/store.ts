@@ -16,6 +16,11 @@ const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 export const supabase: SupabaseClient | null =
   url && key ? createClient(url, key, { auth: { persistSession: false } }) : null;
 
+// Supabase user ids are UUIDs. Demo-mode ids (e.g. "demo-jordan") aren't, and
+// the tenant_id / landlord_id columns would reject them.
+export const isUuid = (id?: string | null): id is string =>
+  !!id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
 interface RequestRow {
   id: string;
   created_at: string;
@@ -59,8 +64,8 @@ const fromRow = (r: RequestRow): MaintenanceRequest => ({
 const toRow = (r: MaintenanceRequest): RequestRow => ({
   id: r.id,
   created_at: r.createdAt,
-  tenant_id: r.tenantId ?? null,
-  landlord_id: r.landlordId ?? null,
+  tenant_id: isUuid(r.tenantId) ? r.tenantId : null,
+  landlord_id: isUuid(r.landlordId) ? r.landlordId : null,
   tenant_name: r.tenantName,
   unit: r.unit,
   property: r.property ?? null,
@@ -79,18 +84,59 @@ const toRow = (r: MaintenanceRequest): RequestRow => ({
 // ---------- In-memory fallback ----------
 
 const globalStore = globalThis as unknown as { __requests?: MaintenanceRequest[] };
-globalStore.__requests ??= [];
+const hoursFromNow = (h: number) => new Date(Date.now() + h * 3600_000).toISOString();
+
+// One sample request for the demo tenant (lib/auth.tsx) when running without Supabase.
+globalStore.__requests ??= [
+  {
+    id: "seed-1",
+    createdAt: hoursFromNow(-2),
+    tenantId: "demo-jordan",
+    tenantName: "Jordan Lee",
+    unit: "Apt 3B",
+    property: { address: "418 Maple Street", city: "Columbus", state: "OH", zip: "43215" },
+    title: "Kitchen sink leaking",
+    description: "Water drips from under the sink whenever it runs. There's a puddle in the cabinet.",
+    photos: [],
+    trade: "plumbing",
+    urgency: "high",
+    status: "contractor_suggested",
+    suggestions: [
+      {
+        contractor: { id: "pre-1", name: "Rapid Rooter Plumbing", trade: "plumbing", phone: "+15552013344", rating: 4.8, source: "preapproved" },
+        channel: "sms",
+        available: true,
+        availableAt: hoursFromNow(22),
+        price: 180,
+        aiReason: "On your trusted list, rated 4.8, and free tomorrow morning.",
+      },
+      {
+        contractor: { id: "web-1", name: "AquaFix Plumbers", trade: "plumbing", phone: "+15559001122", rating: 4.5, source: "online" },
+        channel: "sms",
+        available: true,
+        availableAt: hoursFromNow(46),
+        price: 150,
+        aiReason: "Cheapest quote, but can't come until the day after tomorrow.",
+      },
+    ],
+  },
+];
 const memory = globalStore.__requests;
 
 // ---------- Public API (same functions either way) ----------
 
-export async function listRequests(): Promise<MaintenanceRequest[]> {
-  if (supabase) {
-    const { data, error } = await supabase.from("requests").select("*").order("created_at", { ascending: false });
+// Pass a tenantId to get only that tenant's requests.
+export async function listRequests(filter?: { tenantId?: string }): Promise<MaintenanceRequest[]> {
+  if (supabase && (!filter?.tenantId || isUuid(filter.tenantId))) {
+    let query = supabase.from("requests").select("*").order("created_at", { ascending: false });
+    if (filter?.tenantId) query = query.eq("tenant_id", filter.tenantId);
+    const { data, error } = await query;
     if (error) throw error;
     return (data as RequestRow[]).map(fromRow);
   }
-  return [...memory].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return memory
+    .filter((r) => !filter?.tenantId || r.tenantId === filter.tenantId)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 export async function getRequest(id: string): Promise<MaintenanceRequest | undefined> {

@@ -1,4 +1,6 @@
-import { NextResponse, connection } from "next/server";
+import { NextResponse, connection, type NextRequest } from "next/server";
+import { notify } from "@/lib/outreach";
+import { savePhotos } from "@/lib/photos";
 import { processNewRequest } from "@/lib/pipeline";
 import { listRequests, saveRequest } from "@/lib/store";
 import type { MaintenanceRequest, NewRequestInput } from "@/lib/types";
@@ -6,10 +8,12 @@ import type { MaintenanceRequest, NewRequestInput } from "@/lib/types";
 // Real AI calls (contractor outreach + legal research) take ~30-60s.
 export const maxDuration = 120;
 
-// GET /api/requests -> all requests (newest first)
-export async function GET() {
+// GET /api/requests              -> all requests (newest first), for the landlord
+// GET /api/requests?tenantId=abc -> just that tenant's requests
+export async function GET(req: NextRequest) {
   await connection();
-  return NextResponse.json(await listRequests());
+  const tenantId = req.nextUrl.searchParams.get("tenantId") ?? undefined;
+  return NextResponse.json(await listRequests({ tenantId }));
 }
 
 // POST /api/requests -> tenant submits; AI finds + contacts contractors
@@ -20,19 +24,26 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Title and description are required" }, { status: 400 });
   }
 
+  const id = crypto.randomUUID();
   const request = await saveRequest({
-    id: crypto.randomUUID(),
+    id,
+    tenantId: input.tenantId,
     createdAt: new Date().toISOString(),
     tenantName: input.tenantName,
     unit: input.unit,
     property: input.property,
     title: input.title,
     description: input.description,
-    photos: input.photos ?? [],
+    photos: await savePhotos(id, input.photos), // uploads data: URLs to Supabase Storage
     urgency: input.urgency,
     suggestions: [],
     status: "submitted",
   } satisfies MaintenanceRequest);
 
+  await notify(
+    { userId: request.tenantId, name: request.tenantName },
+    `Got it. We're contacting repair people about "${request.title}".`,
+    `/tenant/requests/${id}`,
+  );
   return NextResponse.json(await processNewRequest(request), { status: 201 });
 }

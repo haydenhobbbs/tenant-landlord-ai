@@ -1,47 +1,74 @@
 import Link from "next/link";
-
-const STEPS = [
-  { emoji: "📝", title: "Tenant reports it", body: "Describe the problem in plain words: a leaky sink, a dead outlet, no heat." },
-  { emoji: "🤖", title: "AI finds a contractor", body: "We figure out the trade and urgency, then line up an available contractor with a quote." },
-  { emoji: "✅", title: "Landlord taps approve", body: "One summary, one button. The job gets booked and the tenant is kept in the loop." },
-];
+import { ArrowRight, Building2, KeyRound } from "lucide-react";
+import { RepairJourney } from "@/components/RepairJourney";
+import { SignedInRedirect } from "@/components/SignedInRedirect";
+import { ButtonLink } from "@/components/ui/Button";
 
 export default function Home() {
   return (
-    <div className="space-y-16">
-      <section className="space-y-6 pt-6 text-center">
-        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-          Maintenance requests, handled.
-        </h1>
-        <p className="mx-auto max-w-2xl text-lg text-slate-600">
-          Tenants report issues, AI finds an available contractor, and the landlord only has to hit approve.
-        </p>
-        <div className="flex flex-wrap justify-center gap-4">
-          <Link
-            href="/tenant"
-            className="rounded-lg bg-slate-900 px-6 py-3 font-medium text-white hover:bg-slate-700"
-          >
-            I&apos;m a tenant
-          </Link>
-          <Link
-            href="/landlord"
-            className="rounded-lg border border-slate-300 bg-white px-6 py-3 font-medium text-slate-900 hover:bg-slate-100"
-          >
-            I&apos;m a landlord
-          </Link>
+    <div className="space-y-20 pb-10">
+      <SignedInRedirect />
+      <section className="grid items-center gap-12 pt-4 lg:grid-cols-[1fr_1.05fr] lg:gap-14 lg:pt-10">
+        <div className="stagger space-y-6">
+          <h1 className="text-4xl leading-[1.08] font-semibold sm:text-6xl">
+            Home repairs, sorted without the <span className="whitespace-nowrap">back-and-forth.</span>
+          </h1>
+          <p className="max-w-[46ch] text-xl text-muted">
+            Tenants say what&apos;s broken. FixFlow finds a repair person with a price and a time. The landlord just
+            taps Approve.
+          </p>
+          <div className="flex flex-wrap items-center gap-4 pt-2">
+            <ButtonLink href="/login" icon={<ArrowRight aria-hidden />} className="flex-row-reverse hover:[&_svg]:translate-x-1">
+              Get started
+            </ButtonLink>
+            <p className="text-base text-muted">Free to try. No app to download.</p>
+          </div>
+        </div>
+
+        <div className="animate-rise [animation-delay:200ms]">
+          <RepairJourney />
         </div>
       </section>
 
-      <section className="grid gap-6 sm:grid-cols-3">
-        {STEPS.map((s, i) => (
-          <div key={s.title} className="rounded-xl border border-slate-200 bg-white p-6">
-            <div className="text-3xl">{s.emoji}</div>
-            <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Step {i + 1}</p>
-            <h2 className="mt-1 font-semibold">{s.title}</h2>
-            <p className="mt-2 text-sm text-slate-600">{s.body}</p>
-          </div>
-        ))}
+      <section aria-labelledby="who" className="space-y-6">
+        <h2 id="who" className="text-2xl sm:text-3xl">Which one are you?</h2>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <RoleLink
+            role="tenant"
+            icon={<KeyRound className="size-7" aria-hidden />}
+            title="I rent a home"
+            body="Report a repair in a minute and follow every step."
+          />
+          <RoleLink
+            role="landlord"
+            icon={<Building2 className="size-7" aria-hidden />}
+            title="I own or manage a property"
+            body="Get one clear summary per repair. Approve with one tap."
+          />
+        </div>
       </section>
     </div>
+  );
+}
+
+function RoleLink({ role, icon, title, body }: { role: string; icon: React.ReactNode; title: string; body: string }) {
+  return (
+    <Link
+      href="/login"
+      data-role={role}
+      className="pressable group flex items-center gap-5 rounded-2xl border border-line bg-surface p-6 shadow-card hover:-translate-y-0.5 hover:border-accent-edge hover:shadow-raised"
+    >
+      <span className="grid size-14 shrink-0 place-items-center rounded-xl border border-accent-edge bg-accent text-on-accent transition-transform duration-300 ease-(--ease-out) group-hover:-rotate-6">
+        {icon}
+      </span>
+      <span className="flex-1">
+        <span className="block text-xl font-bold">{title}</span>
+        <span className="block text-base text-muted">{body}</span>
+      </span>
+      <ArrowRight
+        className="size-6 text-accent-ink transition-transform duration-300 ease-(--ease-out) group-hover:translate-x-1.5"
+        aria-hidden
+      />
+    </Link>
   );
 }

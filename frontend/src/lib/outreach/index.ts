@@ -13,6 +13,7 @@
 // lib/ai and then save the offer on the request. The fake below replies
 // instantly so the demo flow works.
 
+import { addNotification } from "../tenantData";
 import type { ContactChannel, Contractor, ContractorOffer, MaintenanceRequest, Trade } from "../types";
 
 // Landlord's trusted contractors. Teammate B builds the UI to manage these;
@@ -67,6 +68,21 @@ export async function confirmBooking(request: MaintenanceRequest, offer: Contrac
 }
 
 // Notify a tenant or landlord (new message, status change, rent reminder...).
-export async function notify(to: { userId?: string; name?: string }, message: string): Promise<void> {
+// `link` is where tapping the in-app notification goes (optional).
+export async function notify(to: { userId?: string; name?: string }, message: string, link?: string): Promise<void> {
   console.log(`[notify:fake] -> ${to.name ?? to.userId}: ${message}`);
+  // In-app notification (the bell). Added by Nermin; real SMS/email goes above this.
+  if (!to.userId) return;
+  try {
+    await addNotification({
+      id: crypto.randomUUID(),
+      userId: to.userId,
+      message,
+      href: link,
+      read: false,
+      createdAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error("in-app notification failed", err); // never block the main action
+  }
 }

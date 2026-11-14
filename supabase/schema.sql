@@ -148,3 +148,27 @@ alter table public.requests      enable row level security;
 alter table public.outreach_log  enable row level security;
 alter table public.messages      enable row level security;
 alter table public.notifications enable row level security;
+
+-- ============================================================
+-- Added by Nermin (login + tenant app). Additive and safe to run more than once.
+-- Run this part in the Supabase SQL editor.
+-- ============================================================
+
+-- Chat: one conversation per tenant, so the landlord's replies can be found too.
+alter table public.messages add column if not exists tenant_id   uuid references public.profiles on delete cascade;
+alter table public.messages add column if not exists sender_role text check (sender_role in ('tenant', 'landlord'));
+alter table public.messages add column if not exists sender_name text;
+create index if not exists messages_tenant_id_idx on public.messages (tenant_id, created_at);
+
+-- Lease screen: deposit + the key rules in plain words.
+alter table public.leases add column if not exists security_deposit numeric;
+alter table public.leases add column if not exists terms jsonb;  -- [{ "title": "Pets", "body": "..." }]
+
+-- Public bucket for tenant photos (the server uploads with the service role key).
+insert into storage.buckets (id, name, public)
+values ('request-photos', 'request-photos', true)
+on conflict (id) do nothing;
+
+-- Login: Authentication → Sign In / Providers → Email. For the hackathon, turn
+-- OFF "Confirm email" so sign-up (and the "Try as a tenant/landlord" demo
+-- buttons) log straight in.

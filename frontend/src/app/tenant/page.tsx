@@ -1,139 +1,109 @@
 "use client";
 
-// 👤 TENANT SIDE: submit a request + see the status of your requests.
+// 👤 TENANT HOME: one main button (report a problem) + your repairs.
 
-import { useState } from "react";
-import { StatusBadge, UrgencyBadge } from "@/components/StatusBadge";
-import { useRequests } from "@/lib/useRequests";
+import Link from "next/link";
+import { ChevronRight, ImageIcon, Plus } from "lucide-react";
+import { StatusBadge } from "@/components/StatusBadge";
+import { ButtonLink } from "@/components/ui/Button";
+import { useAuth } from "@/lib/auth";
 import { formatDateTime } from "@/lib/format";
-import type { NewRequestInput, Urgency } from "@/lib/types";
+import { useRequests } from "@/lib/useRequests";
 
-const URGENCIES: Urgency[] = ["low", "medium", "high", "emergency"];
+export default function TenantHome() {
+  const { user } = useAuth();
+  const { requests, loaded } = useRequests({ tenantId: user?.id ?? null, pollMs: 5000 });
+  const firstName = user?.name.split(" ")[0] ?? "there";
 
-const EMPTY_FORM: NewRequestInput = {
-  tenantName: "",
-  unit: "",
-  title: "",
-  description: "",
-  urgency: "medium",
-  // TODO (Teammate A): once login exists, get this from the tenant's property.
-  property: { address: "", city: "", state: "", zip: "" },
-};
-
-export default function TenantPage() {
-  const [form, setForm] = useState<NewRequestInput>(EMPTY_FORM);
-  const { requests, reload: load } = useRequests();
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setSubmitting(true);
-    setError(null);
-    const res = await fetch("/api/requests", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    setSubmitting(false);
-    if (!res.ok) {
-      setError((await res.json()).error ?? "Something went wrong");
-      return;
-    }
-    setForm({ ...EMPTY_FORM, tenantName: form.tenantName, unit: form.unit, property: form.property });
-    load();
-  }
-
-  const update = <K extends keyof NewRequestInput>(key: K, value: NewRequestInput[K]) =>
-    setForm((f) => ({ ...f, [key]: value }));
-
-  const inputClass =
-    "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-slate-500 focus:outline-none";
+  const DONE = ["declined", "completed"]; // "completed" is planned in TEAM_PLAN.md
+  const open = requests.filter((r) => !DONE.includes(r.status));
+  const closed = requests.filter((r) => !open.includes(r));
 
   return (
-    <div className="grid gap-10 lg:grid-cols-[1fr_1.2fr]">
-      <section>
-        <h1 className="text-2xl font-bold">Report an issue</h1>
-        <p className="mt-1 text-sm text-slate-600">Tell us what&apos;s wrong and we&apos;ll find someone to fix it.</p>
-
-        <form onSubmit={submit} className="mt-6 space-y-4 rounded-xl border border-slate-200 bg-white p-6">
-          <div className="grid grid-cols-2 gap-4">
-            <label className="space-y-1 text-sm font-medium">
-              <span>Your name</span>
-              <input className={inputClass} value={form.tenantName} onChange={(e) => update("tenantName", e.target.value)} placeholder="Jordan Lee" required />
-            </label>
-            <label className="space-y-1 text-sm font-medium">
-              <span>Unit</span>
-              <input className={inputClass} value={form.unit} onChange={(e) => update("unit", e.target.value)} placeholder="Apt 3B" required />
-            </label>
-          </div>
-
-          <label className="block space-y-1 text-sm font-medium">
-            <span>What&apos;s the problem?</span>
-            <input className={inputClass} value={form.title} onChange={(e) => update("title", e.target.value)} placeholder="Kitchen sink is leaking" required />
-          </label>
-
-          <label className="block space-y-1 text-sm font-medium">
-            <span>Details</span>
-            <textarea className={`${inputClass} min-h-24`} value={form.description} onChange={(e) => update("description", e.target.value)} placeholder="When did it start? Where exactly? Anything you've tried?" required />
-          </label>
-
-          <div className="grid grid-cols-2 gap-4">
-            <label className="space-y-1 text-sm font-medium">
-              <span>City</span>
-              <input className={inputClass} value={form.property?.city ?? ""} onChange={(e) => update("property", { ...form.property!, city: e.target.value })} placeholder="Austin" required />
-            </label>
-            <label className="space-y-1 text-sm font-medium">
-              <span>State</span>
-              <input className={`${inputClass} uppercase`} maxLength={2} value={form.property?.state ?? ""} onChange={(e) => update("property", { ...form.property!, state: e.target.value.toUpperCase() })} placeholder="TX" required />
-            </label>
-            <label className="col-span-2 space-y-1 text-sm font-medium">
-              <span>Urgency</span>
-              <select className={`${inputClass} capitalize`} value={form.urgency} onChange={(e) => update("urgency", e.target.value as Urgency)}>
-                {URGENCIES.map((u) => <option key={u} value={u}>{u}</option>)}
-              </select>
-            </label>
-          </div>
-
-          {error && <p className="text-sm text-rose-600">{error}</p>}
-
-          <button type="submit" disabled={submitting} className="w-full rounded-lg bg-slate-900 py-2.5 font-medium text-white hover:bg-slate-700 disabled:opacity-50">
-            {submitting ? "AI is finding a contractor…" : "Submit request"}
-          </button>
-        </form>
+    <div className="stagger space-y-12">
+      <section className="space-y-6">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold sm:text-4xl">Hi {firstName}</h1>
+          <p className="text-lg text-muted">
+            Something broken at {user?.unit || "home"}? Tell us and we&apos;ll get it fixed.
+          </p>
+        </div>
+        <ButtonLink href="/tenant/report" icon={<Plus aria-hidden />} className="w-full sm:w-auto">
+          Report a problem
+        </ButtonLink>
       </section>
 
-      <section>
-        <h2 className="text-2xl font-bold">My requests</h2>
-        <p className="mt-1 text-sm text-slate-600">Track where each request stands.</p>
+      <section aria-labelledby="repairs" className="space-y-4">
+        <h2 id="repairs" className="text-2xl font-bold">Your repairs</h2>
 
-        <ul className="mt-6 space-y-3">
-          {requests.length === 0 && <li className="text-sm text-slate-500">No requests yet.</li>}
-          {requests.map((r) => (
-            <li key={r.id} className="rounded-xl border border-slate-200 bg-white p-5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="font-semibold">{r.title}</h3>
-                <StatusBadge status={r.status} />
-              </div>
-              <p className="mt-1 text-sm text-slate-600">{r.description}</p>
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                <UrgencyBadge urgency={r.urgency} />
-                {r.trade && <span className="capitalize">{r.trade}</span>}
-                <span>·</span>
-                <span>{r.unit}</span>
-                {r.status === "scheduled" && r.selected && (
-                  <>
-                    <span>·</span>
-                    <span className="font-medium text-emerald-700">
-                      {r.selected.contractor.name} coming{r.scheduledAt ? ` ${formatDateTime(r.scheduledAt)}` : ""}
-                    </span>
-                  </>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
+        {!loaded && (
+          <div className="space-y-3" aria-label="Loading your repairs">
+            <div className="skeleton h-24" />
+            <div className="skeleton h-24" />
+          </div>
+        )}
+
+        {loaded && requests.length === 0 && (
+          <div className="animate-rise rounded-2xl border-2 border-dashed border-line p-8 text-center">
+            <p className="text-lg font-semibold">No repairs yet</p>
+            <p className="mt-1 text-base text-muted">When you report a problem, you can follow it here step by step.</p>
+          </div>
+        )}
+
+        {open.length > 0 && <RequestList items={open} />}
+
+        {closed.length > 0 && (
+          <details className="group pt-2">
+            <summary className="cursor-pointer list-none text-base font-semibold text-accent-ink hover:underline">
+              <span className="group-open:hidden">Show {closed.length} past {closed.length === 1 ? "repair" : "repairs"}</span>
+              <span className="hidden group-open:inline">Hide past repairs</span>
+            </summary>
+            <div className="mt-4">
+              <RequestList items={closed} />
+            </div>
+          </details>
+        )}
       </section>
     </div>
+  );
+}
+
+function RequestList({ items }: { items: ReturnType<typeof useRequests>["requests"] }) {
+  return (
+    <ul className="stagger divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface shadow-card">
+      {items.map((r) => (
+        <li key={r.id}>
+          <Link
+            href={`/tenant/requests/${r.id}`}
+            className="group flex items-center gap-4 p-5 transition-colors duration-200 hover:bg-sunken focus-visible:bg-sunken"
+          >
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <h3 className="text-lg font-bold">{r.title}</h3>
+                <StatusBadge status={r.status} />
+              </div>
+              <p className="flex flex-wrap items-center gap-x-3 text-base text-muted">
+                <span>Sent {formatDateTime(r.createdAt)}</span>
+                {r.photos?.length ? (
+                  <span className="inline-flex items-center gap-1">
+                    <ImageIcon className="size-4" aria-hidden />
+                    {r.photos.length} {r.photos.length === 1 ? "photo" : "photos"}
+                  </span>
+                ) : null}
+              </p>
+              {r.selected && (r.status === "scheduled" || r.status === "landlord_approved") && (
+                <p className="text-base font-semibold text-accent-ink">
+                  {r.selected.contractor.name}
+                  {(r.scheduledAt ?? r.selected.availableAt)
+                    ? ` is coming ${formatDateTime((r.scheduledAt ?? r.selected.availableAt)!)}`
+                    : " is booked"}
+                </p>
+              )}
+            </div>
+            <ChevronRight className="size-6 shrink-0 text-muted transition-transform duration-300 ease-(--ease-out) group-hover:translate-x-1 group-hover:text-accent-ink" aria-hidden />
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }

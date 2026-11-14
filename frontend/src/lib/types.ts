@@ -120,4 +120,47 @@ export interface NewRequestInput {
   urgency: Urgency;
   photos?: string[];
   property?: MaintenanceRequest["property"];
+  tenantId?: string; // the signed-in tenant (added by Nermin for "my requests")
+}
+
+// ---------- Added by Nermin (tenant app) ----------
+
+// Tenant <-> landlord chat. One conversation per tenant (keyed by tenantId).
+export interface ChatMessage {
+  id: string;
+  tenantId: string;
+  senderId: string;
+  senderRole: Role;
+  senderName: string;
+  body: string;
+  createdAt: string; // ISO date-time
+}
+
+// In-app notifications (the bell). Saved by notify() in lib/outreach.
+export interface AppNotification {
+  id: string;
+  userId: string;
+  message: string;
+  href?: string; // where tapping it goes, e.g. /tenant/requests/abc
+  read: boolean;
+  createdAt: string; // ISO date-time
+}
+
+// What the tenant's Lease screen shows.
+export interface Lease {
+  tenantId: string;
+  tenantName: string;
+  landlordName: string;
+  propertyAddress: string;
+  unit: string;
+  city: string;
+  state: string; // 2-letter
+  zip: string;
+  startDate: string; // ISO date
+  endDate: string; // ISO date
+  monthlyRent: number; // USD
+  rentDueDay: number; // 1-31
+  securityDeposit: number; // USD
+  terms: { title: string; body: string }[]; // key rules in plain words
+  documentUrl?: string; // signed PDF, if uploaded
 }

@@ -52,6 +52,13 @@ export async function processNewRequest(request: MaintenanceRequest): Promise<Ma
     legalGuidance,
     status: suggestions.length ? "contractor_suggested" : "finding_contractor",
   });
+  if (suggestions.length) {
+    await notify(
+      { userId: request.tenantId, name: request.tenantName },
+      `We found ${suggestions.length === 1 ? "a repair person" : `${suggestions.length} repair people`} for "${request.title}". Waiting on your landlord to choose.`,
+      `/tenant/requests/${request.id}`,
+    );
+  }
   await notify({ userId: request.landlordId, name: "Landlord" }, `New repair request needs your approval: ${request.title}`);
   return request;
 }
@@ -68,13 +75,14 @@ export async function approveRequest(request: MaintenanceRequest, offerIndex = 0
   await notify(
     { userId: request.tenantId, name: request.tenantName },
     `${selected.contractor.name} is booked for ${request.title}${selected.availableAt ? ` on ${new Date(selected.availableAt).toLocaleString()}` : ""}.`,
+    `/tenant/requests/${request.id}`,
   );
   return request;
 }
 
 export async function declineRequest(request: MaintenanceRequest): Promise<MaintenanceRequest> {
   request = await saveRequest({ ...request, status: "declined" });
-  await notify({ userId: request.tenantId, name: request.tenantName }, `Your request "${request.title}" was declined.`);
+  await notify({ userId: request.tenantId, name: request.tenantName }, `Your request "${request.title}" was declined.`, `/tenant/requests/${request.id}`);
   return request;
 }
 

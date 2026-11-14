@@ -1,31 +1,35 @@
 import type { RequestStatus, Urgency } from "@/lib/types";
 
-const STATUS_STYLES: Record<RequestStatus, { label: string; className: string }> = {
-  submitted: { label: "Sent", className: "bg-slate-100 text-slate-700" },
-  finding_contractor: { label: "Finding a contractor…", className: "bg-sky-100 text-sky-800" },
-  contractor_suggested: { label: "Waiting on landlord", className: "bg-amber-100 text-amber-800" },
-  landlord_approved: { label: "Approved · confirming", className: "bg-emerald-50 text-emerald-700" },
-  scheduled: { label: "Scheduled", className: "bg-emerald-100 text-emerald-800" },
-  completed: { label: "Done", className: "bg-slate-200 text-slate-700" },
-  declined: { label: "Declined", className: "bg-rose-100 text-rose-800" },
+// Plain-words labels. Keys also cover the statuses planned in docs/TEAM_PLAN.md
+// (finding_contractor, contractor_suggested, ...) so nothing breaks when
+// types.ts is updated.
+const STATUS_STYLES: Record<string, { label: string; className: string }> = {
+  submitted: { label: "Sent", className: "bg-sunken text-fg" },
+  finding_contractor: { label: "Finding a repair person", className: "bg-sunken text-fg" },
+  awaiting_approval: { label: "Waiting on landlord", className: "bg-warn-soft text-warn-ink" },
+  contractor_suggested: { label: "Waiting on landlord", className: "bg-warn-soft text-warn-ink" },
+  approved: { label: "Approved", className: "bg-ok-soft text-ok-ink" },
+  landlord_approved: { label: "Approved", className: "bg-ok-soft text-ok-ink" },
+  scheduled: { label: "Booked", className: "bg-ok-soft text-ok-ink" },
+  completed: { label: "Fixed", className: "bg-ok-soft text-ok-ink" },
+  declined: { label: "Declined", className: "bg-danger-soft text-danger-ink" },
 };
 
-const URGENCY_STYLES: Record<Urgency, string> = {
-  low: "bg-slate-100 text-slate-600",
-  medium: "bg-sky-100 text-sky-800",
-  high: "bg-orange-100 text-orange-800",
-  emergency: "bg-red-600 text-white",
+const URGENCY_STYLES: Record<Urgency, { label: string; className: string }> = {
+  low: { label: "Not urgent", className: "bg-sunken text-muted" },
+  medium: { label: "Soon", className: "bg-sunken text-fg" },
+  high: { label: "Urgent", className: "bg-warn-soft text-warn-ink" },
+  emergency: { label: "Emergency", className: "bg-danger text-white dark:text-[#1a0806]" },
 };
 
-export function StatusBadge({ status }: { status: RequestStatus }) {
-  const s = STATUS_STYLES[status] ?? { label: status, className: "bg-slate-100 text-slate-700" };
-  return <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${s.className}`}>{s.label}</span>;
+const pill = "inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold whitespace-nowrap";
+
+export function StatusBadge({ status }: { status: RequestStatus | string }) {
+  const s = STATUS_STYLES[status] ?? { label: status, className: "bg-sunken text-fg" };
+  return <span className={`${pill} ${s.className}`}>{s.label}</span>;
 }
 
 export function UrgencyBadge({ urgency }: { urgency: Urgency }) {
-  return (
-    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${URGENCY_STYLES[urgency]}`}>
-      {urgency}
-    </span>
-  );
+  const u = URGENCY_STYLES[urgency];
+  return <span className={`${pill} ${u.className}`}>{u.label}</span>;
 }
