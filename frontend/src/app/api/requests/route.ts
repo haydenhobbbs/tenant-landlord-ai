@@ -3,6 +3,9 @@ import { processNewRequest } from "@/lib/pipeline";
 import { listRequests, saveRequest } from "@/lib/store";
 import type { MaintenanceRequest, NewRequestInput } from "@/lib/types";
 
+// Real AI calls (contractor outreach + legal research) take ~30-60s.
+export const maxDuration = 120;
+
 // GET /api/requests -> all requests (newest first)
 export async function GET() {
   await connection();
