@@ -19,7 +19,7 @@ export function SettingsView() {
 
   return (
     <div className="stagger mx-auto max-w-3xl space-y-12">
-      <PageHeader title="Settings" intro="Make FixFlow comfortable to read. Changes save right away." />
+      <PageHeader title="Settings" intro="Make Tenly comfortable to read. Changes save right away." />
 
       <Group
         title="Colors"

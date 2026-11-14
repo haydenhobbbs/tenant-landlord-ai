@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
-  FixFlow shared theme. Read docs/DESIGN.md before adding colors.
+  Tenly shared theme. Read docs/DESIGN.md before adding colors.
 
   - Colors are CSS variables, so light/dark and role colors swap in one place.
   - Put data-role="tenant" | "landlord" | "contractor" on a wrapper and every

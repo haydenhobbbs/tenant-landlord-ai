@@ -10,7 +10,7 @@ import { CalendarCheck, Check, Droplets, MessageSquareText, Star } from "lucide-
 
 const STAGES = [
   { role: "tenant", step: "You report it", who: "Tenant" },
-  { role: "contractor", step: "We find a repair person", who: "FixFlow" },
+  { role: "contractor", step: "We find a repair person", who: "Tenly" },
   { role: "landlord", step: "Landlord taps Approve", who: "Landlord" },
   { role: "tenant", step: "It's booked", who: "Everyone" },
 ] as const;
@@ -203,7 +203,7 @@ function BookedStage() {
         </span>
         <p className="text-2xl font-bold">Plumber booked for Tuesday, 10am</p>
       </div>
-      <Bubble>FixFlow: Rapid Rooter Plumbing is coming Tue at 10am to fix your sink. Reply here with any questions.</Bubble>
+      <Bubble>Tenly: Rapid Rooter Plumbing is coming Tue at 10am to fix your sink. Reply here with any questions.</Bubble>
       <p className="text-base text-muted">The tenant, landlord and plumber all got a text and a calendar invite.</p>
     </>
   );

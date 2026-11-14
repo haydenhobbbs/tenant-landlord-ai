@@ -169,7 +169,7 @@ export default function LoginPage() {
 
       <section className="mt-10 border-t border-line pt-6">
         <h2 className="text-lg font-semibold">Just looking around?</h2>
-        <p className="mt-1 text-base text-muted">Try FixFlow with a sample account. Nothing is sent to anyone.</p>
+        <p className="mt-1 text-base text-muted">Try Tenly with a sample account. Nothing is sent to anyone.</p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <button
             type="button"
