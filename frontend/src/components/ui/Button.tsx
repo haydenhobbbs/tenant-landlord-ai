@@ -13,20 +13,21 @@ import type { ComponentProps, ReactNode } from "react";
 type Variant = "primary" | "secondary" | "quiet" | "danger";
 type Size = "md" | "lg";
 
+// Proposal A's buttons (used in C): solid, squared-off, icons nudge on hover.
 const base =
-  "group/btn inline-flex cursor-pointer items-center justify-center gap-2.5 rounded-xl font-semibold transition-[background-color,border-color,color,box-shadow,transform] duration-200 ease-(--ease-out) active:scale-[0.98] active:duration-75 disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-5 [&_svg]:shrink-0 [&_svg]:transition-transform [&_svg]:duration-300 [&_svg]:ease-(--ease-out)";
+  "group/btn inline-flex cursor-pointer items-center justify-center gap-2.5 rounded-lg font-semibold transition-[background-color,border-color,color,box-shadow,transform] duration-200 ease-(--ease-out) active:translate-y-px disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-5 [&_svg]:shrink-0 [&_svg]:transition-transform [&_svg]:duration-300 [&_svg]:ease-(--ease-out) hover:[&_svg]:translate-x-0.5";
 
 const variants: Record<Variant, string> = {
   primary:
-    "bg-accent text-on-accent border border-accent-edge shadow-card hover:-translate-y-0.5 hover:bg-accent-hover hover:shadow-raised active:translate-y-0 hover:[&_svg]:scale-110",
-  secondary: "bg-surface text-fg border border-line-strong hover:bg-sunken",
+    "bg-accent text-on-accent border border-accent-edge shadow-[0_10px_24px_-14px_var(--accent)] hover:bg-accent-hover",
+  secondary: "bg-surface text-fg ring-1 ring-line-strong hover:bg-sunken",
   quiet: "text-accent-ink hover:bg-accent-soft",
   danger: "bg-surface text-danger-ink border border-danger/50 hover:bg-danger-soft",
 };
 
 const sizes: Record<Size, string> = {
   md: "min-h-12 px-5 text-base",
-  lg: "min-h-15 px-7 text-lg",
+  lg: "min-h-[3.6rem] px-7 text-lg",
 };
 
 export function buttonClass(variant: Variant = "primary", size: Size = "lg", extra = "") {

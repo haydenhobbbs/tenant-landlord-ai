@@ -1,9 +1,10 @@
 // Adapted from the supplied wrench-house-logo.svg. The shared role tokens
 // color the same mark for tenant, landlord, and neutral pages.
+// Wrench thickened and enlarged so it reads at small sizes (Nermin).
 export function TenlyLogo() {
   return (
     <svg
-      className="size-9 shrink-0 transition-transform duration-500 ease-(--ease-out) group-hover/logo:-rotate-12"
+      className="size-10 shrink-0 transition-transform duration-500 ease-(--ease-out) group-hover/logo:-rotate-12"
       viewBox="-340 -340 680 680"
       aria-hidden="true"
       focusable="false"
@@ -15,21 +16,21 @@ export function TenlyLogo() {
             <polygon points="-68,600 -68,430 -84,430 0,368 84,430 68,430 68,600" />
             <rect x="38" y="374" width="16" height="42" />
           </g>
-          <circle cx="0" cy="62" r="13" fill="black" />
+          <circle cx="0" cy="58" r="22" fill="black" />
         </mask>
         <g id="tenly-logo-wrench" mask="url(#tenly-logo-cut)">
-          <rect x="-27" y="20" width="54" height="360" rx="27" />
-          <path d="M -27 300 L 27 300 L 85 355 L -85 355 Z" />
-          <circle cx="0" cy="430" r="125" />
+          <rect x="-52" y="0" width="104" height="380" rx="52" />
+          <path d="M -52 285 L 52 285 L 124 352 L -124 352 Z" />
+          <circle cx="0" cy="430" r="150" />
         </g>
       </defs>
       <rect x="-330" y="-330" width="660" height="660" rx="140" fill="var(--accent)" />
-      <g transform="translate(14,14) scale(0.82) rotate(45) translate(0,-287)" fill="var(--accent-ink)">
+      <g transform="translate(46,-24) scale(1.02) rotate(45) translate(0,-275)" fill="var(--accent-ink)">
         <use href="#tenly-logo-wrench" />
       </g>
-      <g transform="scale(0.82) rotate(45) translate(0,-287)">
+      <g transform="translate(28,-40) scale(1.02) rotate(45) translate(0,-275)">
         <g fill="var(--on-accent)"><use href="#tenly-logo-wrench" /></g>
-        <rect x="-18" y="454" width="36" height="36" rx="4" fill="var(--accent-ink)" transform="rotate(-45 0 430)" />
+        <rect x="-24" y="458" width="48" height="48" rx="6" fill="var(--accent-ink)" transform="rotate(-45 0 430)" />
       </g>
     </svg>
   );

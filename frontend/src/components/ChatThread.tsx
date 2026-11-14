@@ -106,7 +106,7 @@ export function ChatThread({ tenantId, me, otherName = "them" }: Props) {
   }
 
   return (
-    <div className="flex min-h-[60vh] flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-card">
+    <div className="flex min-h-[60vh] flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-card">
       <div className="flex-1 space-y-4 overflow-y-auto p-5 sm:p-6" aria-live="polite">
         {loaded && messages.length === 0 && (
           <p className="py-10 text-center text-lg text-muted">No messages yet. Say hello to {otherName}.</p>
@@ -133,7 +133,7 @@ export function ChatThread({ tenantId, me, otherName = "them" }: Props) {
                 <span className="mb-1 px-1 text-sm font-semibold text-muted">{mine ? "You" : m.senderName}</span>
               )}
               <p
-                className={`max-w-[85%] rounded-2xl px-4 py-3 text-lg leading-snug whitespace-pre-line sm:max-w-[70%] ${
+                className={`max-w-[85%] rounded-xl px-4 py-3 text-lg leading-snug whitespace-pre-line sm:max-w-[70%] ${
                   mine ? "rounded-br-md bg-accent text-on-accent" : "rounded-bl-md bg-sunken text-fg"
                 }`}
               >

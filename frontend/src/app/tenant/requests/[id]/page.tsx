@@ -74,7 +74,7 @@ function RequestDetail() {
       <PageHeader title={request.title} back={back} />
 
       {justSent && (
-        <p className="flex items-center gap-3 rounded-2xl bg-accent-soft px-5 py-4 text-lg font-semibold text-accent-ink">
+        <p className="flex items-center gap-3 rounded-xl bg-accent-soft px-5 py-4 text-lg font-semibold text-accent-ink">
           <CheckCircle2 className="size-6 shrink-0 animate-pop [animation-delay:300ms]" aria-hidden />
           Sent! We&apos;ll notify you at every step.
         </p>

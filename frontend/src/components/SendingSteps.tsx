@@ -18,7 +18,7 @@ export function SendingSteps() {
   }, []);
 
   return (
-    <div role="status" aria-live="polite" className="animate-rise rounded-2xl border border-line bg-surface p-6 shadow-card">
+    <div role="status" aria-live="polite" className="animate-rise rounded-xl border border-line bg-surface p-6 shadow-card">
       <ol className="space-y-4">
         {STEPS.map((label, i) => {
           const done = i < step;

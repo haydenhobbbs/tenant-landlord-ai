@@ -52,45 +52,45 @@ export function AskOtherContractors({ requestId, onContacted }: { requestId: str
   }
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-900">
+    <section className="rounded-xl border border-line bg-surface p-6">
       <h2 className="text-xl font-bold">Ask other contractors</h2>
-      <p className="mt-1 text-slate-600 dark:text-slate-300">
+      <p className="mt-1 text-muted">
         Your trusted contractor was contacted first. Want more quotes? The AI found these nearby. Pick any and it will email them for you.
       </p>
       {message && (
         <p
           role={message.kind === "error" ? "alert" : "status"}
-          className={`mt-4 rounded-xl p-4 ${message.kind === "ok" ? "bg-emerald-50 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100" : "bg-rose-50 text-rose-900 dark:bg-rose-950 dark:text-rose-100"}`}
+          className={`mt-4 rounded-xl p-4 ${message.kind === "ok" ? "bg-ok-soft text-ok-ink" : "bg-danger-soft text-danger-ink"}`}
         >
           {message.text}
         </p>
       )}
-      {loadError && <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-4 text-rose-900 dark:bg-rose-950 dark:text-rose-100">{loadError}</p>}
-      {!contractors && !loadError && <p role="status" className="mt-4 text-slate-600 dark:text-slate-300">Searching nearby…</p>}
+      {loadError && <p role="alert" className="mt-4 rounded-xl bg-danger-soft p-4 text-danger-ink">{loadError}</p>}
+      {!contractors && !loadError && <p role="status" className="mt-4 text-muted">Searching nearby…</p>}
       {contractors && contractors.length === 0 && <p className="mt-4">No other contractors found nearby.</p>}
       {contractors && contractors.length > 0 && (
         <ul className="mt-4 space-y-3">
           {contractors.map((c) => (
-            <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+            <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line p-4">
               <div>
                 <p className="text-lg font-bold">{c.name}</p>
-                <p className="text-sm text-slate-600 dark:text-slate-300">
+                <p className="text-sm text-muted">
                   {c.rating != null && <>★ {c.rating.toFixed(1)} · </>}
                   {c.website?.startsWith("https://") ? (
-                    <a href={c.website} target="_blank" rel="noreferrer" className="text-sky-800 underline dark:text-sky-200">Website</a>
+                    <a href={c.website} target="_blank" rel="noreferrer" className="text-landlord-ink underline">Website</a>
                   ) : (
                     "Found online"
                   )}
                 </p>
               </div>
               {c.contacted ? (
-                <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-bold text-emerald-900">✓ Emailed</span>
+                <span className="rounded-full bg-ok-soft px-3 py-1 text-sm font-bold text-ok-ink">✓ Emailed</span>
               ) : (
                 <button
                   type="button"
                   disabled={sending !== null}
                   onClick={() => void ask(c)}
-                  className="min-h-12 rounded-xl border border-sky-900 px-5 font-bold text-sky-900 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-sky-200 dark:text-sky-200 dark:hover:bg-sky-950"
+                  className="min-h-12 rounded-lg border border-landlord-ink px-5 font-bold text-landlord-ink hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {sending === c.id ? "Emailing…" : "Have AI email them"}
                 </button>

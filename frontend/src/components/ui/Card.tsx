@@ -9,7 +9,7 @@ import type { ComponentProps } from "react";
 type Tone = "plain" | "soft" | "contractor";
 
 const tones: Record<Tone, string> = {
-  plain: "bg-surface border border-line shadow-card",
+  plain: "bg-surface border border-line",
   soft: "bg-accent-soft border border-transparent",
   contractor: "bg-contractor-soft border border-contractor/25",
 };
@@ -20,7 +20,7 @@ export function Card({
   as: Tag = "div",
   ...rest
 }: { tone?: Tone; as?: "div" | "section" | "article" | "li" } & ComponentProps<"div">) {
-  return <Tag className={`rounded-2xl p-6 ${tones[tone]} ${className}`} {...(rest as object)} />;
+  return <Tag className={`rounded-xl p-6 ${tones[tone]} ${className}`} {...(rest as object)} />;
 }
 
 export function Divider({ className = "" }: { className?: string }) {

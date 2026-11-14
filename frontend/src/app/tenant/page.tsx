@@ -5,7 +5,6 @@
 import Link from "next/link";
 import { ChevronRight, ImageIcon, Plus } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
-import { ButtonLink } from "@/components/ui/Button";
 import { useAuth } from "@/lib/auth";
 import { formatDateTime } from "@/lib/format";
 import { useRequests } from "@/lib/useRequests";
@@ -21,16 +20,25 @@ export default function TenantHome() {
 
   return (
     <div className="stagger space-y-12">
-      <section className="space-y-6">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold sm:text-4xl">Hi {firstName}</h1>
-          <p className="text-lg text-muted">
-            Something broken at {user?.unit || "home"}? Tell us and we&apos;ll get it fixed.
-          </p>
+      {/* Small navy hero in the proposal C style, with the tenant's green glow */}
+      <section className="relative overflow-hidden rounded-xl bg-navy px-6 py-9 text-white ring-1 ring-white/10 sm:px-9">
+        <div aria-hidden="true" className="glow-blob absolute -top-28 -right-20 size-80 bg-[#1b6b44] opacity-70 blur-3xl" />
+        <div aria-hidden="true" className="gridlines absolute inset-0" />
+        <div className="relative space-y-6">
+          <div className="space-y-2">
+            <h1 className="text-[2.4rem] leading-tight font-semibold sm:text-[2.9rem]">Hi {firstName}</h1>
+            <p className="max-w-xl text-lg text-white/75">
+              Something broken at {user?.unit || "home"}? Tell us and we&apos;ll get it fixed.
+            </p>
+          </div>
+          <Link
+            href="/tenant/report"
+            className="group inline-flex min-h-[3.6rem] w-full items-center justify-center gap-3 rounded-lg bg-tenant-bright px-7 text-lg font-semibold text-navy shadow-[0_10px_30px_-12px_rgba(91,211,143,.7)] transition-colors hover:bg-white sm:w-auto"
+          >
+            <Plus className="size-5" aria-hidden />
+            Report a problem
+          </Link>
         </div>
-        <ButtonLink href="/tenant/report" icon={<Plus aria-hidden />} className="w-full sm:w-auto">
-          Report a problem
-        </ButtonLink>
       </section>
 
       <section aria-labelledby="repairs" className="space-y-4">
@@ -44,7 +52,7 @@ export default function TenantHome() {
         )}
 
         {loaded && requests.length === 0 && (
-          <div className="animate-rise rounded-2xl border-2 border-dashed border-line p-8 text-center">
+          <div className="animate-rise rounded-xl border-2 border-dashed border-line p-8 text-center">
             <p className="text-lg font-semibold">No repairs yet</p>
             <p className="mt-1 text-base text-muted">When you report a problem, you can follow it here step by step.</p>
           </div>
@@ -70,7 +78,7 @@ export default function TenantHome() {
 
 function RequestList({ items }: { items: ReturnType<typeof useRequests>["requests"] }) {
   return (
-    <ul className="stagger divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface shadow-card">
+    <ul className="stagger divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface shadow-card">
       {items.map((r) => (
         <li key={r.id}>
           <Link

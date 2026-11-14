@@ -7,7 +7,7 @@ import type { ComponentProps, ReactNode } from "react";
 //   </Field>
 
 export const inputClass =
-  "w-full rounded-xl border border-line-strong bg-surface px-4 py-3 text-lg text-fg placeholder:text-muted/80 transition-colors focus:border-accent-edge focus:outline-none focus:ring-3 focus:ring-accent-edge/30 disabled:opacity-60";
+  "w-full rounded-lg border border-line-strong bg-surface px-4 py-3 text-lg text-fg placeholder:text-muted/80 transition-colors focus:border-accent-edge focus:outline-none focus:ring-3 focus:ring-accent-edge/30 disabled:opacity-60";
 
 export function Field({
   label,
@@ -43,7 +43,7 @@ export function Textarea({ className = "", ...rest }: ComponentProps<"textarea">
 export function ErrorNote({ children }: { children: ReactNode }) {
   if (!children) return null;
   return (
-    <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-base font-medium text-danger-ink">
+    <p role="alert" className="rounded-lg bg-danger-soft px-4 py-3 text-base font-medium text-danger-ink">
       {children}
     </p>
   );

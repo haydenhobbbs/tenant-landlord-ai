@@ -158,7 +158,7 @@ function ToastCard({ toast, href, onClose }: { toast: Toast; href: string; onClo
       onPointerLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
-      className="pointer-events-auto flex w-full max-w-sm animate-slide-in-right gap-4 rounded-2xl border border-line bg-surface p-4 shadow-raised"
+      className="pointer-events-auto flex w-full max-w-sm animate-slide-in-right gap-4 rounded-xl border border-line bg-surface p-4 shadow-raised"
     >
       <span className="grid size-11 shrink-0 place-items-center rounded-full border border-accent-edge bg-accent text-on-accent">
         <MessageCircle className="size-5" aria-hidden />
@@ -197,7 +197,7 @@ export function UnreadBadge({ count, className = "" }: { count: number; classNam
     <span
       key={count}
       aria-label={`${count} unread`}
-      className={`tabular grid h-5 min-w-5 animate-pop place-items-center rounded-full bg-danger px-1.5 text-xs leading-none font-bold text-white dark:text-[#1a0806] ${className}`}
+      className={`tabular grid h-5 min-w-5 animate-pop place-items-center rounded-full bg-[#e5484d] px-1.5 text-xs leading-none font-bold text-white ${className}`}
     >
       {count > 99 ? "99+" : count}
     </span>
