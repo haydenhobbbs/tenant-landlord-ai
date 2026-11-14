@@ -26,8 +26,8 @@ export function Field({
     <label className={`block space-y-2 ${className}`}>
       <span className="block text-base font-semibold">{label}</span>
       {children}
-      {hint && !error && <span className="block text-sm text-muted">{hint}</span>}
-      {error && <span className="block text-sm font-medium text-danger-ink">{error}</span>}
+      {hint && !error && <span className="block text-base text-muted">{hint}</span>}
+      {error && <span className="block text-base font-medium text-danger-ink">{error}</span>}
     </label>
   );
 }
