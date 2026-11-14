@@ -17,10 +17,11 @@ import { useMessageAlerts } from "@/components/MessageAlerts";
 interface Props {
   tenantId: string;
   me: { id: string; role: "tenant" | "landlord"; name: string };
+  timeZone?: string;
   otherName?: string; // shown in the empty state, e.g. "your landlord"
 }
 
-export function ChatThread({ tenantId, me, otherName = "them" }: Props) {
+export function ChatThread({ tenantId, me, otherName = "them", timeZone }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [draft, setDraft] = useState("");
@@ -140,7 +141,8 @@ export function ChatThread({ tenantId, me, otherName = "them" }: Props) {
                 {m.body}
               </p>
               <time dateTime={m.createdAt} className="mt-1 px-1 text-sm text-muted">
-                {new Date(m.createdAt).toLocaleString(undefined, {
+                {new Date(m.createdAt).toLocaleString(timeZone ? "en-US" : undefined, {
+                  ...(timeZone ? { timeZone, timeZoneName: "short" as const } : {}),
                   month: "short",
                   day: "numeric",
                   hour: "numeric",
@@ -156,7 +158,7 @@ export function ChatThread({ tenantId, me, otherName = "them" }: Props) {
       <form onSubmit={send} className="border-t border-line bg-bg/60 p-4">
         {error && <p className="mb-2 text-base font-medium text-danger-ink">{error}</p>}
         <div className="flex items-end gap-3">
-          <label className="flex-1">
+          <label className="min-w-0 flex-1">
             <span className="sr-only">Write a message</span>
             <textarea
               value={draft}

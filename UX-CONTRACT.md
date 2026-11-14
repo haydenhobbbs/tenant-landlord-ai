@@ -5,7 +5,7 @@ See `DESIGN.md` for visual direction. This contract covers the landlord workflow
 ## Product context
 
 - Audience: tenants and landlords; landlord pages prioritize clear decisions for people who may be new to AI.
-- Locale: English. Times use the browser's locale and timezone.
+- Locale: English. Property times use the state’s main time zone from `frontend/src/lib/timezone.ts`, with a zone abbreviation. Requests without a property state retain browser-local formatting.
 - Source: `docs/TEAM_PLAN.md` defines the requested workflow. `frontend/src/lib/types.ts` and the request API define current data behavior.
 - Accessibility target: WCAG 2.2 AA.
 
@@ -41,3 +41,10 @@ See `DESIGN.md` for visual direction. This contract covers the landlord workflow
 
 - Native select controls own their popup and keyboard behavior. Native file selection owns PDF selection. Forms preserve entered values on failure, show errors near the action, and prevent duplicate submission. The app uses inline status messages rather than a separate toast provider.
 - No irreversible operation occurs without a clear second action. The landlord route shell keeps the document as the scroll owner; messages alone have an internal bounded list.
+
+## My properties
+
+- My properties is the first landlord tab. Whole address cards lead to the home’s residents, messages, and repairs. State groups show the time-zone name; homes sort by city, then street address.
+- Add a property stays on the list with an inline form. `propertyInput` owns validation; shared Fields and Inputs own presentation, and the browser native select owns state selection (including its popup and keyboard behavior). A successful save adds the card immediately and announces the home’s time zone. Failure retains all input.
+- Each resident has their own existing chat thread. Household messages send a copy to each resident; after a partial failure, retry targets only unsuccessful recipients. Replies stay in their individual threads.
+- Calendar visits belong to the property-local day, even when that differs from the viewer’s date. State-based zones are approximate for states that span zones.

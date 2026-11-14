@@ -26,3 +26,6 @@ const ZONES: Record<string, string> = {
 export function timeZoneFor(state: string | undefined): string {
   return ZONES[(state ?? "").trim().toUpperCase()] ?? "America/Chicago";
 }
+
+// Validation and state menus share the exact set supported by timeZoneFor.
+export const US_STATE_CODES = Object.keys(ZONES);

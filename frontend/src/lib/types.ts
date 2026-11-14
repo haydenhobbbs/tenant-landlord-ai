@@ -166,3 +166,19 @@ export interface Lease {
   terms: { title: string; body: string }[]; // key rules in plain words
   documentUrl?: string; // signed PDF, if uploaded
 }
+
+// ---------- Landlord properties ----------
+export interface PropertyResident {
+  tenantId: string;
+  name: string;
+  unit: string;
+}
+
+export interface PropertySummary extends Property {
+  residents: PropertyResident[];
+  openRequestCount: number;
+}
+
+export interface PropertyDetail extends PropertySummary {
+  requests: MaintenanceRequest[];
+}
