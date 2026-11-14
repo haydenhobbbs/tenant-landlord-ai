@@ -24,19 +24,27 @@ export async function processNewRequest(request: MaintenanceRequest): Promise<Ma
   const { trade, urgency } = await triageRequest(request);
   request = await saveRequest({ ...request, trade, urgency, status: "finding_contractor" });
 
-  const preapproved = await getPreapprovedContractors(request.landlordId, trade);
-  const online = await searchContractorsOnline(trade, request.property);
+  // Legal research runs in the background while contractors are contacted.
+  const legalPromise = getLegalGuidance(request);
+
+  const [preapproved, online] = await Promise.all([
+    getPreapprovedContractors(request.landlordId, trade),
+    searchContractorsOnline(trade, request.property),
+  ]);
   const candidates = [...preapproved, ...online].slice(0, MAX_CONTACTS);
 
-  const offers: Omit<ContractorOffer, "aiReason">[] = [];
-  for (const contractor of candidates) {
-    const channel = pickChannel(contractor);
-    const message = await writeOutreachMessage(request, contractor, channel);
-    const { reply } = await contactContractor(contractor, message, channel);
-    if (reply) offers.push({ contractor, channel, ...(await readContractorReply(reply)) });
-  }
+  // Contact all candidates at once.
+  const results = await Promise.all(
+    candidates.map(async (contractor): Promise<Omit<ContractorOffer, "aiReason"> | null> => {
+      const channel = pickChannel(contractor);
+      const message = await writeOutreachMessage(request, contractor, channel);
+      const { reply } = await contactContractor(contractor, message, channel);
+      return reply ? { contractor, channel, ...(await readContractorReply(reply)) } : null;
+    }),
+  );
+  const offers = results.filter((o): o is Omit<ContractorOffer, "aiReason"> => o !== null);
 
-  const [suggestions, legalGuidance] = await Promise.all([rankOffers(request, offers), getLegalGuidance(request)]);
+  const [suggestions, legalGuidance] = await Promise.all([rankOffers(request, offers), legalPromise]);
 
   request = await saveRequest({
     ...request,
