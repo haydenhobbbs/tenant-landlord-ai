@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "./auth";
+import { authFetch } from "./authFetch";
 import type { PropertyDetail, PropertySummary } from "./types";
 
 export function useProperties(id?: string) {
@@ -19,7 +20,7 @@ export function useProperties(id?: string) {
       setLoading(true);
       setError("");
       try {
-        const response = await fetch(`/api/properties${id ? `/${encodeURIComponent(id)}` : ""}?landlordId=${encodeURIComponent(landlordId!)}`, { cache: "no-store", signal: controller.signal });
+        const response = await authFetch(`/api/properties${id ? `/${encodeURIComponent(id)}` : ""}?landlordId=${encodeURIComponent(landlordId!)}`, { cache: "no-store", signal: controller.signal });
         if (!response.ok) throw new Error(response.status === 404 ? "This property could not be found. Go back to My properties to choose a home." : "Could not load properties. Check your connection and try again.");
         const result = await response.json();
         if (!controller.signal.aborted) setData(result);

@@ -12,6 +12,13 @@ const ROLES: { value: Role; label: string; blurb: string; icon: typeof KeyRound 
   { value: "landlord", label: "I own or manage a property", blurb: "Approve repairs in one tap", icon: Building2 },
 ];
 
+// After signing in, go back to where the person came from (e.g. an invite link
+// at /join/MAPLE-4821) if the URL says so. Only same-site paths are allowed.
+function destination(role: Role): string {
+  const next = new URLSearchParams(window.location.search).get("next");
+  return next && next.startsWith("/") && !next.startsWith("//") ? next : homeFor(role);
+}
+
 export default function LoginPage() {
   const { user, loading, mode, signIn, signUp, signInDemo } = useAuth();
   const router = useRouter();
@@ -28,7 +35,7 @@ export default function LoginPage() {
 
   // Already signed in → straight to your home screen.
   useEffect(() => {
-    if (!loading && user) router.replace(homeFor(user.role));
+    if (!loading && user) router.replace(destination(user.role));
   }, [user, loading, router]);
 
   async function submit(e: React.FormEvent) {
@@ -40,14 +47,14 @@ export default function LoginPage() {
     setBusy(false);
     if (!result.ok) return setError(result.error);
     if (result.needsEmailConfirm) return setCheckEmail(true);
-    if (result.user) router.replace(homeFor(result.user.role));
+    if (result.user) router.replace(destination(result.user.role));
   }
 
   async function demo(r: Role) {
     setError(null);
     const result = await signInDemo(r);
     if (!result.ok) return setError(result.error);
-    if (result.user) router.replace(homeFor(result.user.role));
+    if (result.user) router.replace(destination(result.user.role));
   }
 
   if (checkEmail) {

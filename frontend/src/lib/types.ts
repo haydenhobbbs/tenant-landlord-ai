@@ -174,7 +174,12 @@ export interface PropertyResident {
   unit: string;
 }
 
-export interface PropertySummary extends Property {
+export interface InviteProperty extends Property {
+  inviteCode: string;
+  tenants: { id: string; name: string; unit: string }[];
+}
+
+export interface PropertySummary extends InviteProperty {
   residents: PropertyResident[];
   openRequestCount: number;
 }

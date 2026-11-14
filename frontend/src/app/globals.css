@@ -415,6 +415,6 @@ html[data-motion="reduced"] *::after {
   50% { border-radius: 60% 40% 38% 62% / 55% 60% 40% 45%; transform: rotate(18deg); }
 }
 /* Horizontal "one repair" track */
-.snap-track { scroll-snap-type: x mandatory; scrollbar-width: none; }
+.snap-track { scroll-snap-type: x proximity; scrollbar-width: none; }
 .snap-track::-webkit-scrollbar { display: none; }
 .snap-track > * { scroll-snap-align: start; }

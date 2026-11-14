@@ -40,6 +40,7 @@ export default function LandlordPage() {
     {error && <div role="alert" className="rounded-xl border border-danger/30 bg-danger-soft p-5 text-danger-ink"><p>{error}</p><button type="button" onClick={() => void reload()} className="mt-3 font-semibold underline">Try again</button></div>}
     {loading && <p role="status" className="rounded-xl border border-line bg-surface p-6 text-muted">Loading repair requests…</p>}
 
+    {!loading && !error && requests.length === 0 && <div className="rounded-xl border border-landlord-edge/40 bg-surface p-6 shadow-sm"><p className="text-lg font-bold">No repair requests yet</p><p className="mt-1 text-base text-muted">Requests show up here once your tenants join. Send them the invite code or link for their home.</p><Link href="/landlord/properties" className="mt-4 inline-flex min-h-12 items-center rounded-lg bg-accent px-6 text-base font-bold text-on-accent hover:bg-accent-hover">Invite your tenants</Link></div>}
     {!loading && !error && <section aria-labelledby="needs-review" className="space-y-4">
       <h2 id="needs-review" className="text-xl font-bold">Needs your decision <span className="text-landlord-ink">({pending.length})</span></h2>
       {pending.length === 0 && <div className="rounded-xl border border-dashed border-landlord-edge/40 bg-landlord-soft p-7"><p className="font-semibold">No requests need approval right now.</p><p className="mt-1 text-sm text-muted">New contractor suggestions will appear here.</p></div>}

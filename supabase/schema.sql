@@ -186,3 +186,10 @@ create table if not exists public.push_subscriptions (
 );
 create index if not exists push_subscriptions_user_id_idx on public.push_subscriptions (user_id);
 alter table public.push_subscriptions enable row level security;
+
+-- ---------- Added by Hayden: tenant invites ----------
+-- Each property gets a short code (e.g. OAK-4821). A tenant who joins with it
+-- gets a lease row linking them to that property (and so to its landlord).
+-- Applied to the live database 2026-11-14. Safe to run more than once.
+alter table public.properties add column if not exists invite_code text unique;
+create index if not exists leases_tenant_id_idx on public.leases (tenant_id);

@@ -44,7 +44,7 @@ See `DESIGN.md` for visual direction. This contract covers the landlord workflow
 
 ## My properties
 
-- My properties is the first landlord tab. Whole address cards lead to the home’s residents, messages, and repairs. State groups show the time-zone name; homes sort by city, then street address.
-- Add a property stays on the list with an inline form. `propertyInput` owns validation; shared Fields and Inputs own presentation, and the browser native select owns state selection (including its popup and keyboard behavior). A successful save adds the card immediately and announces the home’s time zone. Failure retains all input.
+- My properties is the first landlord tab. Address headings and Open property links lead to the home’s residents, messages, and repairs. Invite copy/share actions sit outside those links. State groups show the time-zone name; homes sort by city, then street address.
+- Add a property stays on the list with an inline form. `propertyInput` owns validation; shared Fields and Inputs own presentation, and the browser native select owns state selection (including its popup and keyboard behavior). A successful save adds the card immediately and announces the invite code and home’s time zone. `PropertyInvite` owns code, link, copy and native sharing behavior on both list and detail pages. Failure retains all input.
 - Each resident has their own existing chat thread. Household messages send a copy to each resident; after a partial failure, retry targets only unsuccessful recipients. Replies stay in their individual threads.
 - Calendar visits belong to the property-local day, even when that differs from the viewer’s date. State-based zones are approximate for states that span zones.

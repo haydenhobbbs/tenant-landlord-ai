@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote, Field, inputClass } from "@/components/ui/Field";
 import { PropertyLocalTime } from "@/components/landlord/PropertyLocalTime";
+import { PropertyInvite } from "@/components/landlord/PropertyInvite";
 import { useProperties } from "@/lib/useProperties";
 import { formatInZone, zoneLabel } from "@/lib/format";
 import { timeZoneFor } from "@/lib/timezone";
@@ -30,6 +31,7 @@ function PropertyContent({ property, user }: { property: PropertyDetail; user: P
   const resident = property.residents.find((person) => person.tenantId === selected);
   return <>
     <header className="space-y-3"><h1 className="break-words text-3xl font-semibold sm:text-4xl">{property.address}</h1><p className="text-lg text-muted">{property.city}, {property.state} {property.zip}</p><p className="text-xl font-semibold text-landlord-ink"><PropertyLocalTime state={property.state} detail /></p><p className="text-muted">Times for this home use {zoneLabel(property.state)}.</p></header>
+    <section aria-labelledby="invite-tenant" className="space-y-4"><h2 id="invite-tenant" className="text-2xl font-semibold">Invite a tenant</h2><p className="text-muted">Share this code or link. Tenants appear here when they join their home.</p><PropertyInvite property={property} /></section>
     <section aria-labelledby="residents" className="space-y-4">
       <h2 id="residents" className="text-2xl font-semibold">Residents &amp; messages</h2>
       {property.residents.length === 0 && <p className="rounded-xl border border-line bg-surface p-6 text-muted">No residents are listed for this home yet. Residents appear here when their leases are linked to this property.</p>}
