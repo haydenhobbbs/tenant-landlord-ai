@@ -1,5 +1,6 @@
 import { readContractorReply, rankOffers } from "@/lib/ai";
 import { getRequest, saveRequest } from "@/lib/store";
+import { timeZoneFor } from "@/lib/timezone";
 import type { ContactChannel, Contractor, ContractorOffer } from "../types";
 import { listMessages, saveMessage } from "./db";
 import { notify } from "./notify";
@@ -28,8 +29,9 @@ export async function onContractorReply(
       id: crypto.randomUUID(), requestId, contractor, channel, direction: "inbound",
       body: text, createdAt: new Date().toISOString(),
     });
-    const parsed = await readContractorReply(text);
     const request = await getRequest(requestId);
+    const timeZone = timeZoneFor(request?.property?.state);
+    const parsed = await readContractorReply(text, { timeZone });
     if (!request || !["submitted", "finding_contractor", "contractor_suggested"].includes(request.status)) return;
     const offers: Omit<ContractorOffer, "aiReason">[] = request.suggestions
       .filter((o) => o.contractor.id !== contractor.id)
@@ -42,7 +44,7 @@ export async function onContractorReply(
     await saveRequest({ ...latest, suggestions, status: suggestions.length ? "contractor_suggested" : latest.status });
     const details = [parsed.price !== undefined ? `$${parsed.price}` : undefined,
       parsed.availableAt ? new Date(parsed.availableAt).toLocaleString("en-US", {
-        weekday: "short", hour: "numeric", minute: "2-digit",
+        weekday: "short", hour: "numeric", minute: "2-digit", timeZone,
       }) : undefined].filter(Boolean).join(", ");
     await notify({ userId: request.landlordId, name: "Landlord" }, parsed.available
       ? `${contractor.name} replied: ${details || text}`

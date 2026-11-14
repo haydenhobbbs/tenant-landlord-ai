@@ -1,3 +1,4 @@
+import { timeZoneFor } from "../timezone";
 import type { ContractorOffer, MaintenanceRequest } from "../types";
 import { buildIcs } from "./ics";
 import { sendEmail, sendSms } from "./send";
@@ -9,7 +10,7 @@ export async function confirmBooking(request: MaintenanceRequest, offer: Contrac
       ? new Date(offer.availableAt) : new Date(Date.now() + 86_400_000);
     const location = [request.property?.address, request.property?.city,
       [request.property?.state, request.property?.zip].filter(Boolean).join(" "), request.unit].filter(Boolean).join(", ");
-    const confirmation = `Confirmed: ${request.title} at ${location}, ${start.toLocaleString("en-US")}${offer.price !== undefined ? `, $${offer.price}` : ""}.`;
+    const confirmation = `Confirmed: ${request.title} at ${location}, ${start.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short", timeZone: timeZoneFor(request.property?.state) })}${offer.price !== undefined ? `, $${offer.price}` : ""}.`;
     const attendeeEmail = process.env.DEMO_CONTRACTOR_EMAIL || contractor.email || "";
     const ics = buildIcs({
       uid: `${request.id}@tenant-landlord-ai`, title: `${request.title} — ${request.unit}`,
