@@ -46,11 +46,11 @@ completed              Job done
 - Request inbox with big, clear **Approve / Decline** buttons.
 - Request detail page: tenant message, photos, AI's suggested contractor (price, time, why), and Hayden's legal guidance.
 - **Pre-approved contractors:** add, edit, and remove trusted contractors (the AI tries these first).
+- **Find contractors online (delegated by Teammate C):** configure and verify Google Places search by trade and location, returning name, phone, rating, and website.
 - Chat with tenants (for example 24-hour entry notices) using Supabase Realtime.
 - **View lease**, and see upcoming scheduled jobs on a simple calendar.
 
 ### Teammate C: contractor outreach and notifications
-- **Find contractors online:** use the Google Places API (or Yelp) to search by trade and location, returning name, phone, rating, and website.
 - **Contact them:** send SMS and make calls with Twilio (an AI voice agent like Vapi or Bland is a stretch goal), and email with Resend.
 - **Receive replies:** webhooks that take a contractor's text or email reply and pass it to Hayden's AI to read.
 - **Book it:** after the landlord approves, send the contractor a confirmation plus a calendar invite (.ics).

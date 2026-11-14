@@ -1,5 +1,7 @@
 # Contractor outreach and notifications
 
+Google Places search and its API key setup are owned by Anthony (Teammate B). See [`docs/PLACES_SETUP.md`](../../../../docs/PLACES_SETUP.md). Teammate C owns contact, replies, booking, and notifications.
+
 Import the public API from `@/lib/outreach`. It uses the shared types in
 `lib/types.ts` and the existing `lib/store.ts` Supabase client.
 
