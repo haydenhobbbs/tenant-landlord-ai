@@ -92,7 +92,7 @@ export async function addMessage(m: ChatMessage): Promise<ChatMessage> {
 
 export const DEFAULT_TERMS: Lease["terms"] = [
   { title: "Rent", body: "Due on the 1st of each month. A $50 late fee applies after the 5th." },
-  { title: "Repairs", body: "Report problems through FixFlow. Your landlord arranges and pays for repairs you didn't cause." },
+  { title: "Repairs", body: "Report problems through Tenly. Your landlord arranges and pays for repairs you didn't cause." },
   { title: "Entry", body: "Your landlord gives at least 24 hours' notice before entering, except in an emergency." },
   { title: "Pets", body: "One cat or small dog allowed with a $300 pet deposit." },
   { title: "Utilities", body: "Water and trash are included. You pay electric and internet." },

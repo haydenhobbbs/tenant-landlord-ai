@@ -23,7 +23,7 @@ const heading = Lora({
 });
 
 export const metadata: Metadata = {
-  title: "FixFlow · Tenant ↔ Landlord AI",
+  title: "Tenly · Tenant ↔ Landlord AI",
   description: "Tenants report issues, AI finds contractors, landlords approve.",
 };
 

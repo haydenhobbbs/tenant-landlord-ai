@@ -39,13 +39,13 @@ export default function NavBar() {
       <nav className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-2 px-5 py-3 sm:px-8">
         <Link
           href={user ? homeFor(user.role) : "/"}
-          aria-label={user ? "FixFlow, go to your home screen" : "FixFlow home"}
+          aria-label={user ? "Tenly, go to your home screen" : "Tenly home"}
           className="group/logo mr-auto inline-flex min-h-11 items-center gap-2.5 font-[family-name:var(--font-heading)] text-xl font-bold"
         >
           <span className="grid size-9 place-items-center rounded-lg bg-accent text-on-accent transition-transform duration-500 ease-(--ease-out) group-hover/logo:-rotate-12">
             <Wrench className="size-5" aria-hidden />
           </span>
-          FixFlow
+          Tenly
         </Link>
 
         {links.length > 0 && (

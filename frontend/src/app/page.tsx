@@ -14,7 +14,7 @@ export default function Home() {
             Home repairs, sorted without the <span className="whitespace-nowrap">back-and-forth.</span>
           </h1>
           <p className="max-w-[46ch] text-xl text-muted">
-            Tenants say what&apos;s broken. FixFlow finds a repair person with a price and a time. The landlord just
+            Tenants say what&apos;s broken. Tenly finds a repair person with a price and a time. The landlord just
             taps Approve.
           </p>
           <div className="flex flex-wrap items-center gap-4 pt-2">

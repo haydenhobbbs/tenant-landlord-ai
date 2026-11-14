@@ -1,4 +1,4 @@
-# FixFlow design guide
+# Tenly design guide
 
 Read this before building a screen, so everything looks like one app.
 
