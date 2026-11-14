@@ -73,7 +73,7 @@ export default function LoginPage() {
         {tab === "signin" ? "Sign in to see your repairs." : "It takes about a minute."}
       </p>
 
-      <div role="tablist" aria-label="Sign in or create account" className="relative mt-8 grid grid-cols-2 gap-1 rounded-2xl bg-sunken p-1">
+      <div role="tablist" aria-label="Sign in or create account" className="relative mt-8 grid grid-cols-2 gap-1 rounded-xl bg-sunken p-1">
         {/* sliding highlight behind the active tab */}
         <span
           aria-hidden
@@ -105,7 +105,7 @@ export default function LoginPage() {
               <label
                 key={value}
                 data-role={value}
-                className={`pressable flex cursor-pointer items-center gap-4 rounded-2xl border-2 p-4 has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent-edge ${
+                className={`pressable flex cursor-pointer items-center gap-4 rounded-xl border-2 p-4 has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent-edge ${
                   role === value ? "border-accent-edge bg-accent-soft" : "border-line bg-surface hover:border-line-strong"
                 }`}
               >

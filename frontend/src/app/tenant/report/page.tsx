@@ -177,7 +177,7 @@ export default function ReportPage() {
               return (
                 <label
                   key={value}
-                  className={`pressable flex cursor-pointer items-center gap-4 rounded-2xl border-2 px-5 py-4 ${
+                  className={`pressable flex cursor-pointer items-center gap-4 rounded-xl border-2 px-5 py-4 ${
                     on
                       ? emergency
                         ? "border-danger bg-danger-soft"

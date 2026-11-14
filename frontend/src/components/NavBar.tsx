@@ -36,15 +36,23 @@ export default function NavBar() {
       ? pathname === l.href || (pathname.startsWith(`${l.href}/`) && !links.some((o) => !o.exact && pathname.startsWith(o.href)))
       : pathname.startsWith(l.href);
 
+  // Proposal C: navy bar in both themes. The logo tile and the active-tab marker
+  // use the role's bright color (tenant green, landlord baby blue).
+  const roleColor = user?.role === "landlord" ? "var(--landlord)" : "var(--tenant-bright)";
+
   return (
-    <header className="border-b border-line bg-surface" data-role={user?.role}>
-      <nav className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-2 px-5 py-3 sm:px-8">
+    <header
+      className="sticky top-0 z-40 border-b border-navy-line bg-navy/95 text-white backdrop-blur"
+      data-role={user?.role}
+      style={{ "--nav-accent": roleColor } as React.CSSProperties}
+    >
+      <nav className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-5 py-2.5 sm:px-8">
         <Link
           href={user ? homeFor(user.role) : "/"}
           aria-label={user ? "Tenly, go to your home screen" : "Tenly home"}
-          className="group/logo mr-auto inline-flex min-h-11 items-center gap-2.5 font-[family-name:var(--font-heading)] text-xl font-bold"
+          className="group/logo mr-auto inline-flex min-h-11 items-center gap-2.5 font-[family-name:var(--font-heading)] text-[1.35rem] font-bold tracking-tight"
         >
-          <span className="grid size-9 place-items-center rounded-lg bg-accent text-on-accent transition-transform duration-500 ease-(--ease-out) group-hover/logo:-rotate-12">
+          <span className="grid size-8 place-items-center rounded-md bg-(--nav-accent) text-navy transition-transform duration-500 ease-(--ease-out) group-hover/logo:-rotate-12">
             <Wrench className="size-5" aria-hidden />
           </span>
           Tenly
@@ -64,8 +72,10 @@ export default function NavBar() {
                   <Link
                     href={l.href}
                     aria-current={active ? "page" : undefined}
-                    className={`flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl px-2 text-sm font-semibold transition-colors duration-200 sm:flex-row sm:gap-2 sm:px-3 sm:text-base ${
-                      active ? "bg-accent-soft text-accent-ink" : "text-muted hover:bg-sunken hover:text-fg"
+                    className={`flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-lg px-2 text-sm font-medium transition-colors duration-200 sm:flex-row sm:gap-2 sm:px-3 sm:text-[0.95rem] ${
+                      active
+                        ? "bg-white/10 text-white shadow-[inset_0_-2px_0_var(--nav-accent)]"
+                        : "text-white/70 hover:bg-white/10 hover:text-white"
                     }`}
                   >
                     <span className="relative">
@@ -87,10 +97,10 @@ export default function NavBar() {
           <Link
             href={`/${user.role}/notifications`}
             aria-label={unread ? `Notifications, ${unread} new` : "Notifications"}
-            className={`relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl transition-colors ${
+            className={`relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg transition-colors ${
               pathname.startsWith(`/${user.role}/notifications`)
-                ? "bg-accent-soft text-accent-ink"
-                : "text-muted hover:bg-sunken hover:text-fg"
+                ? "bg-white/10 text-white shadow-[inset_0_-2px_0_var(--nav-accent)]"
+                : "text-white/70 hover:bg-white/10 hover:text-white"
             }`}
           >
             {/* key on the count: the bell swings and the badge pops each time something new arrives */}
@@ -98,7 +108,7 @@ export default function NavBar() {
             {unread > 0 && (
               <span
                 key={`badge-${unread}`}
-                className="tabular absolute top-1.5 right-1 grid min-w-5 animate-pop place-items-center rounded-full bg-danger px-1 text-xs font-bold text-white dark:text-[#1a0806]"
+                className="tabular absolute top-1.5 right-1 grid min-w-5 animate-pop place-items-center rounded-full bg-[#e5484d] px-1 text-xs font-bold text-white"
               >
                 {unread}
               </span>
@@ -107,12 +117,17 @@ export default function NavBar() {
         )}
 
         {!user && pathname !== "/login" && (
-          <Link
-            href="/login"
-            className="inline-flex min-h-11 items-center rounded-xl px-4 text-base font-semibold text-fg hover:bg-sunken"
-          >
-            Sign in
-          </Link>
+          <div className="flex items-center gap-1">
+            <Link href="/login" className="inline-flex min-h-11 items-center rounded-lg px-4 text-[0.95rem] font-medium text-white/80 hover:text-white">
+              Sign in
+            </Link>
+            <Link
+              href="/login"
+              className="inline-flex min-h-11 items-center rounded-lg bg-white px-4 text-[0.95rem] font-semibold text-navy transition-colors hover:bg-tenant-bright"
+            >
+              Get started
+            </Link>
+          </div>
         )}
       </nav>
     </header>

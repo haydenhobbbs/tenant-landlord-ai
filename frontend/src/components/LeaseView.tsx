@@ -30,7 +30,7 @@ export function LeaseView({ lease }: { lease: Lease }) {
 
   return (
     <div className="stagger space-y-10">
-      <section className="rounded-2xl border border-line bg-surface p-6 shadow-card sm:p-8">
+      <section className="rounded-xl border border-line bg-surface p-6 shadow-card sm:p-8">
         <p className="text-xl font-bold">
           {lease.propertyAddress}
           {lease.unit && `, ${lease.unit}`}

@@ -62,7 +62,7 @@ export function SettingsView() {
       {user && (
         <section aria-labelledby="account" className="space-y-4">
           <h2 id="account" className="text-2xl">Your account</h2>
-          <dl className="divide-y divide-line rounded-2xl border border-line bg-surface shadow-card">
+          <dl className="divide-y divide-line rounded-xl border border-line bg-surface shadow-card">
             {[
               ["Name", user.name],
               ["Email", user.email],
@@ -113,7 +113,7 @@ function Group<V extends Preferences[keyof Preferences]>({
           return (
             <label
               key={o.value}
-              className={`pressable relative flex min-h-20 cursor-pointer items-center gap-4 rounded-2xl border-2 p-4 has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent-edge ${
+              className={`pressable relative flex min-h-20 cursor-pointer items-center gap-4 rounded-xl border-2 p-4 has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent-edge ${
                 on ? "border-accent-edge bg-accent-soft" : "border-line bg-surface hover:border-line-strong"
               }`}
             >

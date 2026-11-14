@@ -41,7 +41,7 @@ export function NotificationsView() {
       )}
 
       {loaded && items.length === 0 && (
-        <div className="flex animate-rise flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-line p-10 text-center">
+        <div className="flex animate-rise flex-col items-center gap-3 rounded-xl border-2 border-dashed border-line p-10 text-center">
           <BellOff className="size-10 text-muted" aria-hidden />
           <p className="text-lg font-semibold">Nothing new</p>
           <p className="text-base text-muted">We&apos;ll let you know here when something changes.</p>
@@ -49,7 +49,7 @@ export function NotificationsView() {
       )}
 
       {items.length > 0 && (
-        <ul className="stagger divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface shadow-card">
+        <ul className="stagger divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface shadow-card">
           {items.map((n) => {
             const content = (
               <>

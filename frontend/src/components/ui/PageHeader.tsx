@@ -28,7 +28,7 @@ export function PageHeader({
       )}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold sm:text-4xl">{title}</h1>
+          <h1 className="text-[2.1rem] leading-tight font-semibold sm:text-[2.6rem]">{title}</h1>
           {intro && <p className="max-w-[60ch] text-lg text-muted">{intro}</p>}
         </div>
         {action}

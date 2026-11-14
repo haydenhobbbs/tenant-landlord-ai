@@ -45,6 +45,10 @@
   --color-accent-soft: var(--accent-soft);
   --color-accent-ink: var(--accent-ink);
 
+  --color-navy: var(--navy);
+  --color-navy-2: var(--navy-2);
+  --color-navy-line: var(--navy-line);
+  --color-tenant-bright: var(--tenant-bright);
   --color-tenant: var(--tenant);
   --color-tenant-soft: var(--tenant-soft);
   --color-tenant-ink: var(--tenant-ink);
@@ -63,45 +67,53 @@
   --color-danger-soft: var(--danger-soft);
   --color-danger-ink: var(--danger-ink);
 
-  --shadow-card: 0 1px 2px rgb(20 24 22 / 0.05), 0 4px 16px -4px rgb(20 24 22 / 0.08);
-  --shadow-raised: 0 2px 4px rgb(20 24 22 / 0.06), 0 12px 32px -8px rgb(20 24 22 / 0.16);
+  --shadow-card: 0 1px 2px rgb(11 18 32 / 0.05), 0 4px 16px -6px rgb(11 18 32 / 0.08);
+  --shadow-raised: 0 2px 4px rgb(11 18 32 / 0.06), 0 18px 40px -16px rgb(11 18 32 / 0.25);
 }
 
 /* ---------- Light (default) ---------- */
+/* Design: proposal C ("Repairs that run themselves"): navy + paper, Outfit/Rubik,
+   tight corners, tenant forest green, landlord baby blue, repair pros deep red. */
 :root {
   color-scheme: light;
 
-  --bg: #f5f4ef;
+  --bg: #f6f7f4; /* paper */
   --surface: #ffffff;
-  --sunken: #ecebe4;
-  --fg: #1b1f1c;
-  --muted: #535a55;
-  --line: #dcdad2;
-  --line-strong: #b9b7ae;
+  --sunken: #eef0ec;
+  --fg: #0b1220; /* ink */
+  --muted: #535d6b;
+  --line: #e1e4e0;
+  --line-strong: #c2c7c1;
+
+  /* Navy chrome (top bar, hero) stays dark in both themes */
+  --navy: #0a111d;
+  --navy-2: #111a29;
+  --navy-line: #1e2a3b;
 
   /* Role colors */
-  --tenant: #22603f; /* forest green */
-  --tenant-hover: #1a4d32;
-  --tenant-soft: #e2efe6;
-  --tenant-ink: #174a2e;
+  --tenant: #1b6b44; /* forest green */
+  --tenant-hover: #14532f;
+  --tenant-bright: #5bd38f;
+  --tenant-soft: #e4f2ea;
+  --tenant-ink: #14532f;
 
-  --landlord: #8fd0f0; /* baby blue */
-  --landlord-hover: #74c2e9;
+  --landlord: #9ad8f7; /* baby blue */
+  --landlord-hover: #7fcbf2;
   --landlord-edge: #4d9fc7;
-  --landlord-on: #0a2a3d;
-  --landlord-soft: #e3f2fa;
-  --landlord-ink: #1a5576;
+  --landlord-on: #0c3b5c;
+  --landlord-soft: #e6f4fc;
+  --landlord-ink: #0c3b5c;
 
-  --contractor: #8b1e2d; /* deep "navy" red */
-  --contractor-hover: #711825;
-  --contractor-soft: #f7e5e7;
-  --contractor-ink: #7a1a27;
+  --contractor: #8e2333; /* deep red */
+  --contractor-hover: #741b29;
+  --contractor-soft: #f7e6e8;
+  --contractor-ink: #7a1d2b;
 
   /* Status */
   --warn-soft: #fbefd5;
   --warn-ink: #77490a;
-  --ok-soft: #e2efe6;
-  --ok-ink: #174a2e;
+  --ok-soft: #e4f2ea;
+  --ok-ink: #14532f;
   --danger: #b42318;
   --danger-soft: #fbe6e3;
   --danger-ink: #8f1d14;
@@ -121,35 +133,35 @@
   & {
     color-scheme: dark;
 
-    --bg: #111412;
-    --surface: #1a1e1b;
-    --sunken: #0c0e0d;
-    --fg: #eceee9;
-    --muted: #a5aca6;
-    --line: #2d332f;
-    --line-strong: #46504a;
+    --bg: #0a111d;
+    --surface: #111a29;
+    --sunken: #070c15;
+    --fg: #eef1f5;
+    --muted: #9ba5b3;
+    --line: #1e2a3b;
+    --line-strong: #34445c;
 
-    --tenant: #62b98a;
-    --tenant-hover: #7cc9a0;
-    --tenant-soft: #18291f;
-    --tenant-ink: #9ed8b6;
+    --tenant: #5bd38f;
+    --tenant-hover: #7de0a7;
+    --tenant-soft: #12281d;
+    --tenant-ink: #8be3b0;
 
-    --landlord: #9ad7f5;
-    --landlord-hover: #b5e3f9;
-    --landlord-edge: #9ad7f5;
-    --landlord-on: #0a2a3d;
-    --landlord-soft: #14273a;
-    --landlord-ink: #ade0f8;
+    --landlord: #9ad8f7;
+    --landlord-hover: #b8e5fa;
+    --landlord-edge: #9ad8f7;
+    --landlord-on: #0c3b5c;
+    --landlord-soft: #12263a;
+    --landlord-ink: #b2e2f9;
 
-    --contractor: #e57a87;
-    --contractor-hover: #ee98a2;
-    --contractor-soft: #2e1519;
-    --contractor-ink: #f2a9b1;
+    --contractor: #f3a4ae;
+    --contractor-hover: #f7bec5;
+    --contractor-soft: #2c141a;
+    --contractor-ink: #f5b3bb;
 
     --warn-soft: #2f2410;
     --warn-ink: #f1c678;
-    --ok-soft: #18291f;
-    --ok-ink: #9ed8b6;
+    --ok-soft: #12281d;
+    --ok-ink: #8be3b0;
     --danger: #f07a6c;
     --danger-soft: #331815;
     --danger-ink: #f6aca2;
@@ -157,7 +169,7 @@
     --accent: var(--fg);
     --accent-hover: #ffffff;
     --accent-edge: var(--fg);
-    --on-accent: #111412;
+    --on-accent: #0a111d;
   }
 }
 
@@ -172,7 +184,7 @@
 }
 [data-theme="dark"] [data-role="tenant"],
 [data-theme="dark"][data-role="tenant"] {
-  --on-accent: #0b1f13;
+  --on-accent: #0a111d;
 }
 
 [data-role="landlord"] {
@@ -206,6 +218,7 @@
   }
 
   body {
+    overflow-x: clip; /* full-width home sections use 100vw */
     background: var(--bg);
     color: var(--fg);
     line-height: 1.55;
@@ -225,8 +238,8 @@
   }
 
   ::selection {
-    background: var(--accent-soft);
-    color: var(--accent-ink);
+    background: var(--tenant-bright);
+    color: #0b1220;
   }
 
   input,
@@ -254,13 +267,14 @@
 
   h1,
   h2 {
-    font-family: var(--font-heading), Georgia, serif;
+    font-family: var(--font-heading), system-ui, sans-serif;
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.028em;
   }
 
   /* Respect "reduce motion": everything appears in its final state at once. */
   @media (prefers-reduced-motion: reduce) {
+    .glow-blob { animation: none !important; }
     *,
     *::before,
     *::after {
@@ -382,3 +396,25 @@ html[data-motion="reduced"] *::after {
   transition-duration: 0.01ms !important;
   scroll-behavior: auto !important;
 }
+
+/* ---------- Proposal C hero pieces ---------- */
+/* Faint structural grid behind dark hero sections */
+.gridlines {
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.045) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: linear-gradient(to bottom, #000 40%, transparent 95%);
+}
+/* The glowing green + blue shapes (slowly change shape) */
+.glow-blob {
+  animation: morph 14s ease-in-out infinite;
+}
+@keyframes morph {
+  0%, 100% { border-radius: 42% 58% 61% 39% / 45% 39% 61% 55%; transform: rotate(0); }
+  50% { border-radius: 60% 40% 38% 62% / 55% 60% 40% 45%; transform: rotate(18deg); }
+}
+/* Horizontal "one repair" track */
+.snap-track { scroll-snap-type: x mandatory; scrollbar-width: none; }
+.snap-track::-webkit-scrollbar { display: none; }
+.snap-track > * { scroll-snap-align: start; }
