@@ -64,13 +64,13 @@ export default function TenantNotificationsPage() {
                     {timeAgo(n.createdAt)}
                   </span>
                 </span>
-                {n.href && <ChevronRight className="mt-1 size-6 shrink-0 text-muted transition-transform duration-300 ease-(--ease-out) group-hover:translate-x-1 group-hover:text-accent-ink" aria-hidden />}
+                {n.link && <ChevronRight className="mt-1 size-6 shrink-0 text-muted transition-transform duration-300 ease-(--ease-out) group-hover:translate-x-1 group-hover:text-accent-ink" aria-hidden />}
               </>
             );
             return (
               <li key={n.id}>
-                {n.href ? (
-                  <Link href={n.href} className="group flex gap-4 p-5 transition-colors duration-200 hover:bg-sunken">
+                {n.link ? (
+                  <Link href={n.link} className="group flex gap-4 p-5 transition-colors duration-200 hover:bg-sunken">
                     {content}
                   </Link>
                 ) : (

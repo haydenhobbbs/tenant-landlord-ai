@@ -136,16 +136,6 @@ export interface ChatMessage {
   createdAt: string; // ISO date-time
 }
 
-// In-app notifications (the bell). Saved by notify() in lib/outreach.
-export interface AppNotification {
-  id: string;
-  userId: string;
-  message: string;
-  href?: string; // where tapping it goes, e.g. /tenant/requests/abc
-  read: boolean;
-  createdAt: string; // ISO date-time
-}
-
 // What the tenant's Lease screen shows.
 export interface Lease {
   tenantId: string;

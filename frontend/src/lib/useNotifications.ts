@@ -1,11 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { AppNotification } from "./types";
+import type { AppNotification } from "./outreach/types";
 
-// Notifications for one user, refreshed every 10 seconds.
-// Other parts of the app can call window.dispatchEvent(new Event("fixflow:notifications"))
-// to refresh right away (e.g. after marking them read).
+// Notifications for one user (Teammate C's /api/notifications), refreshed
+// every 10 seconds. Call refreshNotifications() to refresh right away.
 const EVENT = "fixflow:notifications";
 
 export function refreshNotifications() {
@@ -37,16 +36,14 @@ export function useNotifications(userId: string | null | undefined) {
     };
   }, [userId, load]);
 
+  // C's API marks one at a time (PATCH /api/notifications/:id).
   const markAllRead = useCallback(async () => {
-    if (!userId) return;
+    const unread = items.filter((n) => !n.read);
+    if (!unread.length) return;
     setItems((list) => list.map((n) => ({ ...n, read: true })));
-    await fetch("/api/notifications", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId }),
-    });
+    await Promise.all(unread.map((n) => fetch(`/api/notifications/${n.id}`, { method: "PATCH" }).catch(() => null)));
     refreshNotifications();
-  }, [userId]);
+  }, [items]);
 
   return { items, loaded, markAllRead, reload: load };
 }

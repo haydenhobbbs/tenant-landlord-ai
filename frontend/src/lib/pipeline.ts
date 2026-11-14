@@ -15,6 +15,7 @@ import {
   searchContractorsOnline,
 } from "./outreach";
 import { saveRequest } from "./store";
+import { timeZoneFor } from "./timezone";
 import type { ContractorOffer, MaintenanceRequest } from "./types";
 
 const MAX_CONTACTS = 3;
@@ -38,8 +39,8 @@ export async function processNewRequest(request: MaintenanceRequest): Promise<Ma
     candidates.map(async (contractor): Promise<Omit<ContractorOffer, "aiReason"> | null> => {
       const channel = pickChannel(contractor);
       const message = await writeOutreachMessage(request, contractor, channel);
-      const { reply } = await contactContractor(contractor, message, channel);
-      return reply ? { contractor, channel, ...(await readContractorReply(reply)) } : null;
+      const { reply } = await contactContractor(contractor, message, channel, { requestId: request.id });
+      return reply ? { contractor, channel, ...(await readContractorReply(reply, { timeZone: timeZoneFor(request.property?.state) })) } : null;
     }),
   );
   const offers = results.filter((o): o is Omit<ContractorOffer, "aiReason"> => o !== null);
@@ -52,14 +53,14 @@ export async function processNewRequest(request: MaintenanceRequest): Promise<Ma
     legalGuidance,
     status: suggestions.length ? "contractor_suggested" : "finding_contractor",
   });
+  await notify({ userId: request.landlordId, name: "Landlord" }, `New repair request needs your approval: ${request.title}`);
   if (suggestions.length) {
     await notify(
       { userId: request.tenantId, name: request.tenantName },
       `We found ${suggestions.length === 1 ? "a repair person" : `${suggestions.length} repair people`} for "${request.title}". Waiting on your landlord to choose.`,
-      `/tenant/requests/${request.id}`,
+      { link: `/tenant/requests/${request.id}`, requestId: request.id },
     );
   }
-  await notify({ userId: request.landlordId, name: "Landlord" }, `New repair request needs your approval: ${request.title}`);
   return request;
 }
 
@@ -74,15 +75,18 @@ export async function approveRequest(request: MaintenanceRequest, offerIndex = 0
   request = await saveRequest({ ...request, scheduledAt: selected.availableAt, status: "scheduled" });
   await notify(
     { userId: request.tenantId, name: request.tenantName },
-    `${selected.contractor.name} is booked for ${request.title}${selected.availableAt ? ` on ${new Date(selected.availableAt).toLocaleString()}` : ""}.`,
-    `/tenant/requests/${request.id}`,
+    `${selected.contractor.name} is booked for ${request.title}${selected.availableAt ? ` on ${new Date(selected.availableAt).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short", timeZone: timeZoneFor(request.property?.state) })}` : ""}.`,
+    { link: `/tenant/requests/${request.id}`, requestId: request.id },
   );
   return request;
 }
 
 export async function declineRequest(request: MaintenanceRequest): Promise<MaintenanceRequest> {
   request = await saveRequest({ ...request, status: "declined" });
-  await notify({ userId: request.tenantId, name: request.tenantName }, `Your request "${request.title}" was declined.`, `/tenant/requests/${request.id}`);
+  await notify({ userId: request.tenantId, name: request.tenantName }, `Your request "${request.title}" was declined.`, {
+    link: `/tenant/requests/${request.id}`,
+    requestId: request.id,
+  });
   return request;
 }
 

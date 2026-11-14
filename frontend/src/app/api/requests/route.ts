@@ -43,7 +43,7 @@ export async function POST(req: Request) {
   await notify(
     { userId: request.tenantId, name: request.tenantName },
     `Got it. We're contacting repair people about "${request.title}".`,
-    `/tenant/requests/${id}`,
+    { link: `/tenant/requests/${id}`, requestId: id },
   );
   return NextResponse.json(await processNewRequest(request), { status: 201 });
 }

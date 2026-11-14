@@ -1,7 +1,8 @@
 import { isUuid, supabase as db } from "./store";
-import type { AppNotification, ChatMessage, Lease } from "./types";
+import type { ChatMessage, Lease } from "./types";
 
-// 🗄️ STORAGE for chat messages, notifications and leases (server-side only).
+// 🗄️ STORAGE for chat messages and leases (server-side only).
+// (Notifications are Teammate C's: lib/outreach/notify.ts.)
 //
 // Uses the team's Supabase tables (supabase/schema.sql) when keys are set and
 // the user is a real Supabase account. Otherwise (no keys, demo accounts, or a
@@ -10,7 +11,6 @@ import type { AppNotification, ChatMessage, Lease } from "./types";
 
 const g = globalThis as unknown as {
   __messages?: ChatMessage[];
-  __notifications?: AppNotification[];
 };
 
 const hoursAgo = (h: number) => new Date(Date.now() - h * 3600_000).toISOString();
@@ -27,18 +27,8 @@ g.__messages ??= [
   },
 ];
 
-g.__notifications ??= [
-  {
-    id: "n1",
-    userId: "demo-jordan",
-    message: "We found 2 repair people for “Kitchen sink leaking”. Waiting on your landlord to choose.",
-    href: "/tenant/requests/seed-1",
-    read: false,
-    createdAt: hoursAgo(1),
-  },
-];
 
-const mem = { messages: g.__messages, notifications: g.__notifications };
+const mem = { messages: g.__messages };
 
 // Missing table/column → use memory instead of crashing.
 function notSetUp(error: { message: string; code?: string } | null) {
@@ -94,65 +84,6 @@ export async function addMessage(m: ChatMessage): Promise<ChatMessage> {
   }
   mem.messages.push(m);
   return m;
-}
-
-// ---------- Notifications ----------
-// Team table: notifications(id, user_id, type, body, link, read_at, created_at)
-
-export async function listNotifications(userId: string): Promise<AppNotification[]> {
-  if (db && isUuid(userId)) {
-    const { data, error } = await db
-      .from("notifications")
-      .select("id, user_id, body, link, read_at, created_at")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(50);
-    if (!notSetUp(error)) {
-      if (error) throw error;
-      return data.map((r) => ({
-        id: r.id,
-        userId: r.user_id,
-        message: r.body,
-        href: r.link ?? undefined,
-        read: r.read_at !== null,
-        createdAt: r.created_at,
-      }));
-    }
-  }
-  return mem.notifications.filter((n) => n.userId === userId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-}
-
-export async function addNotification(n: AppNotification): Promise<void> {
-  if (db && isUuid(n.userId)) {
-    const { error } = await db.from("notifications").insert({
-      id: n.id,
-      user_id: n.userId,
-      type: "request_update",
-      body: n.message,
-      link: n.href ?? null,
-      created_at: n.createdAt,
-    });
-    if (!notSetUp(error)) {
-      if (error) throw error;
-      return;
-    }
-  }
-  mem.notifications.push(n);
-}
-
-export async function markAllRead(userId: string): Promise<void> {
-  if (db && isUuid(userId)) {
-    const { error } = await db
-      .from("notifications")
-      .update({ read_at: new Date().toISOString() })
-      .eq("user_id", userId)
-      .is("read_at", null);
-    if (!notSetUp(error)) {
-      if (error) throw error;
-      return;
-    }
-  }
-  for (const n of mem.notifications) if (n.userId === userId) n.read = true;
 }
 
 // ---------- Lease ----------
