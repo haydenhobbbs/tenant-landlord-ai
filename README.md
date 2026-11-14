@@ -29,7 +29,8 @@ Then open http://localhost:3000.
 |------|------|-------|
 | Shared data types | `frontend/src/lib/types.ts` | Everyone (ask first) |
 | AI brain (fake for now) | `frontend/src/lib/ai/index.ts` | Hayden |
-| Contractor search, texts/emails/calls, notifications (fake for now) | `frontend/src/lib/outreach/index.ts` | Teammate C |
+| Google Places contractor search and key setup | `frontend/src/lib/outreach/search.ts` | Anthony (Teammate B) |
+| Contractor texts/emails/calls and notifications | `frontend/src/lib/outreach/` | Teammate C |
 | The repair flow that connects them | `frontend/src/lib/pipeline.ts` | — |
 | Tenant page | `frontend/src/app/tenant/page.tsx` | Teammate A |
 | Landlord page | `frontend/src/app/landlord/page.tsx` | Teammate B |
@@ -39,7 +40,7 @@ Then open http://localhost:3000.
 
 Flow: `submitted → finding_contractor → contractor_suggested → landlord_approved → scheduled → completed`. See [docs/TEAM_PLAN.md](docs/TEAM_PLAN.md).
 
-API keys go in `frontend/.env.local`, which git ignores. Copy `.env.example` to get started.
+API keys go in `frontend/.env.local`, which git ignores. Copy `.env.example` to get started. See [Google Places setup](docs/PLACES_SETUP.md) for contractor search.
 
 See [docs/TEAM_PLAN.md](docs/TEAM_PLAN.md) for who does what, and [CONTRIBUTING.md](CONTRIBUTING.md) for how we work together.
 

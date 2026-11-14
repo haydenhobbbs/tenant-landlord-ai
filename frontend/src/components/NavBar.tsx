@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, FileText, Home, MessageCircle, Settings, Wrench, type LucideIcon } from "lucide-react";
+import { Bell, FileText, Home, MessageCircle, Settings, type LucideIcon } from "lucide-react";
+import { TenlyLogo } from "@/components/TenlyLogo";
 import { homeFor, useAuth, type Role } from "@/lib/auth";
 import { useUnreadCount } from "@/lib/useNotifications";
 import { UnreadBadge, useMessageAlerts } from "@/components/MessageAlerts";
@@ -52,8 +53,18 @@ export default function NavBar() {
           aria-label={user ? "Tenly, go to your home screen" : "Tenly home"}
           className="group/logo mr-auto inline-flex min-h-11 items-center gap-2.5 font-[family-name:var(--font-heading)] text-[1.35rem] font-bold tracking-tight"
         >
-          <span className="grid size-8 place-items-center rounded-md bg-(--nav-accent) text-navy transition-transform duration-500 ease-(--ease-out) group-hover/logo:-rotate-12">
-            <Wrench className="size-5" aria-hidden />
+{/* Teammate's logo, recolored for the navy bar: bright role color + navy mark. */}
+          <span
+            className="contents"
+            style={
+              {
+                "--accent": "var(--nav-accent)",
+                "--on-accent": "#0a111d",
+                "--accent-ink": user?.role === "landlord" ? "#4d9fc7" : "#1b6b44",
+              } as React.CSSProperties
+            }
+          >
+            <TenlyLogo />
           </span>
           Tenly
         </Link>
