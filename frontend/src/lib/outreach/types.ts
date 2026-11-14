@@ -39,4 +39,5 @@ export interface NotifyOptions {
   type?: NotificationType;
   link?: string;
   requestId?: string;
+  push?: boolean;
 }

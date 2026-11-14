@@ -21,7 +21,7 @@ import type { ContractorOffer, MaintenanceRequest } from "./types";
 const MAX_CONTACTS = 3;
 
 // Tenant just submitted -> AI finds + contacts contractors -> landlord gets suggestions.
-export async function processNewRequest(request: MaintenanceRequest): Promise<MaintenanceRequest> {
+export async function processNewRequest(request: MaintenanceRequest, allowPush = false): Promise<MaintenanceRequest> {
   const { trade, urgency } = await triageRequest(request);
   request = await saveRequest({ ...request, trade, urgency, status: "finding_contractor" });
 
@@ -53,19 +53,21 @@ export async function processNewRequest(request: MaintenanceRequest): Promise<Ma
     legalGuidance,
     status: suggestions.length ? "contractor_suggested" : "finding_contractor",
   });
-  await notify({ userId: request.landlordId, name: "Landlord" }, `New repair request needs your approval: ${request.title}`);
+  await notify({ userId: request.landlordId, name: "Landlord" }, `New repair request needs your approval: ${request.title}`, {
+    link: "/landlord", push: false, // The new-request alert was already pushed.
+  });
   if (suggestions.length) {
     await notify(
       { userId: request.tenantId, name: request.tenantName },
       `We found ${suggestions.length === 1 ? "a repair person" : `${suggestions.length} repair people`} for "${request.title}". Waiting on your landlord to choose.`,
-      { link: `/tenant/requests/${request.id}`, requestId: request.id },
+      { link: `/tenant/requests/${request.id}`, requestId: request.id, push: allowPush },
     );
   }
   return request;
 }
 
 // Landlord approves one of the suggestions -> confirm with contractor -> scheduled.
-export async function approveRequest(request: MaintenanceRequest, offerIndex = 0): Promise<MaintenanceRequest> {
+export async function approveRequest(request: MaintenanceRequest, offerIndex = 0, allowPush = false): Promise<MaintenanceRequest> {
   const selected = request.suggestions[offerIndex];
   if (!selected) throw new Error("No contractor suggestion to approve");
 
@@ -76,16 +78,17 @@ export async function approveRequest(request: MaintenanceRequest, offerIndex = 0
   await notify(
     { userId: request.tenantId, name: request.tenantName },
     `${selected.contractor.name} is booked for ${request.title}${selected.availableAt ? ` on ${new Date(selected.availableAt).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short", timeZone: timeZoneFor(request.property?.state) })}` : ""}.`,
-    { link: `/tenant/requests/${request.id}`, requestId: request.id },
+    { link: `/tenant/requests/${request.id}`, requestId: request.id, push: allowPush },
   );
   return request;
 }
 
-export async function declineRequest(request: MaintenanceRequest): Promise<MaintenanceRequest> {
+export async function declineRequest(request: MaintenanceRequest, allowPush = false): Promise<MaintenanceRequest> {
   request = await saveRequest({ ...request, status: "declined" });
   await notify({ userId: request.tenantId, name: request.tenantName }, `Your request "${request.title}" was declined.`, {
     link: `/tenant/requests/${request.id}`,
     requestId: request.id,
+    push: allowPush,
   });
   return request;
 }

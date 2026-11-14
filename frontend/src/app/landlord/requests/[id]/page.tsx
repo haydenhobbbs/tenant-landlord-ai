@@ -7,6 +7,7 @@ import { useState } from "react";
 import { StatusBadge, UrgencyBadge } from "@/components/StatusBadge";
 import { useLandlordRequests } from "@/lib/useLandlordRequests";
 import { formatDateTime, formatPrice } from "@/lib/format";
+import { pushAccessToken } from "@/lib/pushClient";
 
 export default function RequestDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -21,7 +22,8 @@ export default function RequestDetailPage() {
     if (busy) return;
     setBusy(true); setActionError(""); setNotice("");
     try {
-      const response = await fetch(`/api/requests/${encodeURIComponent(id)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, offerIndex }) });
+      const token = await pushAccessToken();
+      const response = await fetch(`/api/requests/${encodeURIComponent(id)}`, { method: "PATCH", headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ action, offerIndex }) });
       if (!response.ok) throw new Error("Update failed");
       setNotice(action === "approve" ? "Contractor approved." : "Request declined.");
       await reload();

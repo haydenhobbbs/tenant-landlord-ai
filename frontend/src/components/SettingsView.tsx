@@ -7,8 +7,10 @@ import { useRouter } from "next/navigation";
 import { Check, LogOut, Monitor, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PushSettings } from "@/components/PushSettings";
 import { useAuth } from "@/lib/auth";
 import { setPreference, usePreferences, type Preferences } from "@/lib/preferences";
+import { unsubscribeCurrentDevice } from "@/lib/pushClient";
 
 type Option<V> = { value: V; label: string; hint?: string; icon?: React.ReactNode; preview?: React.ReactNode };
 
@@ -56,6 +58,8 @@ export function SettingsView() {
         ]}
       />
 
+      {user && <PushSettings />}
+
       {user && (
         <section aria-labelledby="account" className="space-y-4">
           <h2 id="account" className="text-2xl">Your account</h2>
@@ -76,6 +80,7 @@ export function SettingsView() {
             variant="secondary"
             icon={<LogOut aria-hidden />}
             onClick={async () => {
+              await unsubscribeCurrentDevice().catch(() => {});
               await signOut();
               router.push("/login");
             }}

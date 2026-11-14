@@ -1,5 +1,6 @@
 import { getNotifications, readNotification, saveNotification } from "./db";
 import { sendEmail, sendSms } from "./send";
+import { sendPush } from "@/lib/push";
 import type { NotifyOptions } from "./types";
 
 export async function notify(
@@ -14,6 +15,7 @@ export async function notify(
     await Promise.all([
       to.phone ? sendSms(to.phone, message) : undefined,
       to.email ? sendEmail({ to: to.email, subject: "Home maintenance update", text: message }) : undefined,
+      opts.push !== true || !to.userId ? undefined : sendPush(to.userId, message, opts.link),
     ]);
   } catch (error) {
     console.error("[outreach] Notification failed", error);

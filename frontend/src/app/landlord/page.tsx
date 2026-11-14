@@ -5,6 +5,7 @@ import { useState } from "react";
 import { StatusBadge, UrgencyBadge } from "@/components/StatusBadge";
 import { useLandlordRequests } from "@/lib/useLandlordRequests";
 import { formatDateTime, formatPrice } from "@/lib/format";
+import { pushAccessToken } from "@/lib/pushClient";
 import type { MaintenanceRequest } from "@/lib/types";
 
 export default function LandlordPage() {
@@ -17,8 +18,9 @@ export default function LandlordPage() {
     if (busyId) return;
     setBusyId(id); setActionError(""); setNotice("");
     try {
+      const token = await pushAccessToken();
       const response = await fetch(`/api/requests/${encodeURIComponent(id)}`, {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
+        method: "PATCH", headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ action, offerIndex }),
       });
       if (!response.ok) throw new Error("Update failed");

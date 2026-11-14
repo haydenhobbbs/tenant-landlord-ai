@@ -11,6 +11,7 @@ import { ErrorNote, Field, Input, Textarea } from "@/components/ui/Field";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useAuth } from "@/lib/auth";
 import { shrinkImage } from "@/lib/shrinkImage";
+import { pushAccessToken } from "@/lib/pushClient";
 import type { Lease, NewRequestInput, Urgency } from "@/lib/types";
 
 const URGENCY: { value: Urgency; label: string; hint: string }[] = [
@@ -83,9 +84,10 @@ export default function ReportPage() {
       photos,
     };
     try {
+      const token = await pushAccessToken();
       const res = await fetch("/api/requests", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify(body),
       });
       const data = await res.json();

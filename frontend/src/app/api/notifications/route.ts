@@ -20,6 +20,7 @@ export async function POST(request: Request) {
     || (body.type !== undefined && !["message", "request_update", "rent_reminder"].includes(body.type))) {
     return NextResponse.json({ error: "Valid userId or name, message and optional type are required" }, { status: 400 });
   }
-  await notify({ userId: body.userId, name: body.name }, body.message, { type: body.type as NotificationType | undefined });
+  // This legacy demo route is public, so it must not trigger a phone alert.
+  await notify({ userId: body.userId, name: body.name }, body.message, { type: body.type as NotificationType | undefined, push: false });
   return NextResponse.json({ ok: true }, { status: 201 });
 }

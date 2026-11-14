@@ -25,6 +25,8 @@ const heading = Lora({
 export const metadata: Metadata = {
   title: "Tenly · Tenant ↔ Landlord AI",
   description: "Tenants report issues, AI finds contractors, landlords approve.",
+  appleWebApp: { capable: true, title: "Tenly", statusBarStyle: "default" },
+  icons: { icon: "/icons/tenly.svg", apple: "/icons/tenly-180.png" },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
