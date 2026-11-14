@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Check, LogOut, Monitor, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PushToggle } from "@/components/PushToggle";
 import { useAuth } from "@/lib/auth";
 import { setPreference, usePreferences, type Preferences } from "@/lib/preferences";
 
@@ -55,6 +56,8 @@ export function SettingsView() {
           { value: "reduced", label: "No animations", hint: "Everything appears at once" },
         ]}
       />
+
+      <PushToggle key={user?.id} />
 
       {user && (
         <section aria-labelledby="account" className="space-y-4">

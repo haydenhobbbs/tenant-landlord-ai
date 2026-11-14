@@ -1,6 +1,7 @@
 import { getNotifications, readNotification, saveNotification } from "./db";
 import { sendEmail, sendSms } from "./send";
 import type { NotifyOptions } from "./types";
+import { sendWebPush } from "@/lib/push/send";
 
 export async function notify(
   to: { userId?: string; name?: string; phone?: string; email?: string },
@@ -12,6 +13,7 @@ export async function notify(
       type: opts.type ?? "request_update", link: opts.link, read: false, createdAt: new Date().toISOString(),
     });
     await Promise.all([
+      to.userId ? sendWebPush(to.userId, message, opts.link ?? "/") : undefined,
       to.phone ? sendSms(to.phone, message) : undefined,
       to.email ? sendEmail({ to: to.email, subject: "Home maintenance update", text: message }) : undefined,
     ]);
