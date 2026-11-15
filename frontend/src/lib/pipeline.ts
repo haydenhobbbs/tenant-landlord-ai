@@ -30,6 +30,15 @@ function contactLimit(): number {
   return process.env.DEMO_CONTRACTOR_EMAIL || process.env.DEMO_CONTRACTOR_PHONE ? 1 : MAX_CONTACTS;
 }
 
+/** "Plumbing repair request in Austin, TX". Short and the same every time. */
+function emailSubject(request: MaintenanceRequest): string {
+  const kind = request.trade && request.trade !== "general"
+    ? `${request.trade === "hvac" ? "HVAC" : request.trade[0].toUpperCase() + request.trade.slice(1)} repair request`
+    : "Repair request";
+  const where = [request.property?.city, request.property?.state].filter(Boolean).join(", ");
+  return where ? `${kind} in ${where}` : kind;
+}
+
 // Tenant just submitted -> AI sorts it and researches the rules -> landlord decides.
 // NO contractor is contacted here: the landlord may fix it themselves, so outreach
 // waits until they press "Have the AI contact a contractor" (findContractors).
@@ -71,7 +80,7 @@ export async function findContractors(request: MaintenanceRequest): Promise<Main
     candidates.map(async (contractor): Promise<Omit<ContractorOffer, "aiReason"> | null> => {
       const channel = pickChannel(contractor);
       const message = await writeOutreachMessage(request, contractor, channel);
-      const { reply } = await contactContractor(contractor, message, channel, { requestId: request.id });
+      const { reply } = await contactContractor(contractor, message, channel, { requestId: request.id, subject: emailSubject(request) });
       return reply ? { contractor, channel, ...(await readContractorReply(reply, { timeZone: timeZoneFor(request.property?.state) })) } : null;
     }),
   );
@@ -168,7 +177,7 @@ export async function contactExtraContractor(
   const channel = pickChannel(clean);
   const message = await writeOutreachMessage(request, clean, channel);
   if (request.status === "submitted") request = await startFindingContractors(request);
-  const { reply } = await contactContractor(clean, message, channel, { requestId: request.id });
+  const { reply } = await contactContractor(clean, message, channel, { requestId: request.id, subject: emailSubject(request) });
   // With no email/SMS keys the contact is simulated and replies right away.
   if (reply) await onContractorReply(request.id, clean, reply, channel);
   return { ok: true, contractor: clean };

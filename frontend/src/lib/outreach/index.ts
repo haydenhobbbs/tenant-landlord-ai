@@ -6,7 +6,7 @@ import { searchPlaces } from "./search";
 export { contactContractor } from "./contact";
 export { confirmBooking } from "./booking";
 export { notify, listNotifications, markNotificationRead } from "./notify";
-export { onContractorReply, findThreadByAddress, findThreadByContractor } from "./replies";
+export { onContractorReply, findThreadByAddress, findThreadByContractor, findThreadByRef } from "./replies";
 export { buildIcs } from "./ics";
 export { sendRentReminders, FAKE_TENANTS } from "./rent";
 export { isTrade } from "./search";
