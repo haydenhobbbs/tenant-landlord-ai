@@ -90,6 +90,13 @@ export default function ReportPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Something went wrong.");
+      // Next.js keeps this page's state when you leave it, so clear the form now.
+      // Otherwise the next "Report a problem" would show this request again.
+      setTitle("");
+      setDescription("");
+      setUrgency("medium");
+      setPhotos([]);
+      setSubmitting(false);
       router.push(`/tenant/requests/${data.id}?new=1`);
     } catch (err) {
       setSubmitting(false);

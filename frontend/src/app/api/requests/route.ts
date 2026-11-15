@@ -1,4 +1,4 @@
-import { NextResponse, connection, type NextRequest } from "next/server";
+import { NextResponse, after, connection, type NextRequest } from "next/server";
 import { notify } from "@/lib/outreach";
 import { savePhotos } from "@/lib/photos";
 import { tenantLink } from "@/lib/invites";
@@ -75,5 +75,15 @@ ${request.description}`,
     `Got it. We're contacting repair people about "${request.title}".`,
     { link: `/tenant/requests/${id}`, requestId: id },
   );
-  return NextResponse.json(await processNewRequest(request), { status: 201 });
+  // The AI work (triage, contacting contractors, legal research) takes up to a
+  // minute. Answer right away so the tenant lands on their request's page (it
+  // refreshes itself), and keep working after the response is sent.
+  after(async () => {
+    try {
+      await processNewRequest(request);
+    } catch (err) {
+      console.error("[requests] Processing a new request failed", id, err);
+    }
+  });
+  return NextResponse.json(request, { status: 201 });
 }

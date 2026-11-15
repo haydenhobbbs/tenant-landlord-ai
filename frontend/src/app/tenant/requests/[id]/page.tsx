@@ -25,7 +25,9 @@ export default function RequestDetailPage() {
 function RequestDetail() {
   const { id } = useParams<{ id: string }>();
   const justSent = useSearchParams().get("new") === "1";
-  const [request, setRequest] = useState<MaintenanceRequest | null>(null);
+  const [loaded, setRequest] = useState<MaintenanceRequest | null>(null);
+  // Next.js keeps this page's state between visits; never show a different repair's data.
+  const request = loaded?.id === id ? loaded : null;
   const [missing, setMissing] = useState(false);
 
   // Refresh every 5s so the tenant sees "Booked" appear without reloading.
