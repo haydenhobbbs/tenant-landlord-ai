@@ -18,7 +18,7 @@ import { authFetch } from "@/lib/authFetch";
 interface Props {
   tenantId: string;
   me: { id: string; role: "tenant" | "landlord"; name: string };
-  timeZone?: string;
+  timeZone?: string; // the property's time zone (Brenen), e.g. "America/New_York"
   otherName?: string; // shown in the empty state, e.g. "your landlord"
 }
 
@@ -123,33 +123,43 @@ export function ChatThread({ tenantId, me, otherName = "them", timeZone }: Props
           const mine = m.senderRole === me.role;
           const fresh = seen !== null && !seen.has(m.id);
           const prev = messages[i - 1];
-          const showName = !prev || prev.senderRole !== m.senderRole;
+          const newDay = !prev || dayKey(prev.createdAt) !== dayKey(m.createdAt);
+          const showName = newDay || !prev || prev.senderRole !== m.senderRole;
+          // "Sent" / "Seen" only under your most recent message, like a phone.
+          const lastMine = mine && !messages.slice(i + 1).some((n) => n.senderRole === me.role);
           return (
-            <div
-              key={m.id}
-              className={`flex flex-col ${mine ? "items-end" : "items-start"} ${
-                fresh ? (mine ? "animate-slide-in-right" : "animate-slide-in-left") : ""
-              }`}
-            >
-              {showName && (
-                <span className="mb-1 px-1 text-sm font-semibold text-muted">{mine ? "You" : m.senderName}</span>
+            <div key={m.id}>
+              {newDay && (
+                <p className="my-5 flex items-center gap-3 text-base font-semibold text-muted first:mt-0" role="separator">
+                  <span className="h-px flex-1 bg-line" />
+                  {dayLabel(m.createdAt)}
+                  <span className="h-px flex-1 bg-line" />
+                </p>
               )}
-              <p
-                className={`max-w-[85%] rounded-xl px-4 py-3 text-lg leading-snug whitespace-pre-line sm:max-w-[70%] ${
-                  mine ? "rounded-br-md bg-accent text-on-accent" : "rounded-bl-md bg-sunken text-fg"
+              <div
+                className={`flex flex-col ${mine ? "items-end" : "items-start"} ${
+                  fresh ? (mine ? "animate-slide-in-right" : "animate-slide-in-left") : ""
                 }`}
               >
-                {m.body}
-              </p>
-              <time dateTime={m.createdAt} className="mt-1 px-1 text-sm text-muted">
-                {new Date(m.createdAt).toLocaleString(timeZone ? "en-US" : undefined, {
-                  ...(timeZone ? { timeZone, timeZoneName: "short" as const } : {}),
-                  month: "short",
-                  day: "numeric",
-                  hour: "numeric",
-                  minute: "2-digit",
-                })}
-              </time>
+                {showName && <span className="mb-1 px-1 text-base font-semibold text-muted">{mine ? "You" : m.senderName}</span>}
+                <p
+                  className={`max-w-[88%] rounded-xl px-4 py-3 text-lg leading-snug whitespace-pre-line sm:max-w-[72%] ${
+                    mine ? "rounded-br-md bg-accent text-on-accent" : "rounded-bl-md bg-sunken text-fg"
+                  }`}
+                >
+                  {m.body}
+                </p>
+                <span className="mt-1 px-1 text-base text-muted">
+                  <time dateTime={m.createdAt}>
+                    {new Date(m.createdAt).toLocaleTimeString(timeZone ? "en-US" : undefined, {
+                      ...(timeZone ? { timeZone, timeZoneName: "short" as const } : {}),
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </time>
+                  {lastMine && <span className="font-semibold">{m.readAt ? " · Seen" : " · Sent"}</span>}
+                </span>
+              </div>
             </div>
           );
         })}
@@ -157,10 +167,14 @@ export function ChatThread({ tenantId, me, otherName = "them", timeZone }: Props
       </div>
 
       <form onSubmit={send} className="border-t border-line bg-bg/60 p-4">
-        {error && <p className="mb-2 text-base font-medium text-danger-ink">{error}</p>}
+        {error && (
+          <p role="alert" className="mb-3 rounded-lg bg-danger-soft px-4 py-3 text-base font-medium text-danger-ink">
+            {error}
+          </p>
+        )}
         <div className="flex items-end gap-3">
           <label className="min-w-0 flex-1">
-            <span className="sr-only">Write a message</span>
+            <span className="mb-1.5 block text-base font-semibold">Your message</span>
             <textarea
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
@@ -172,15 +186,29 @@ export function ChatThread({ tenantId, me, otherName = "them", timeZone }: Props
               }}
               rows={1}
               maxLength={2000}
-              placeholder="Write a message…"
-              className={`${inputClass} max-h-40 min-h-12 resize-none`}
+              placeholder={`Write to ${otherName}…`}
+              className={`${inputClass} max-h-48 min-h-14 resize-none`}
             />
           </label>
-          <Button type="submit" size="md" disabled={sending || !draft.trim()} icon={<SendHorizontal aria-hidden />}>
-            Send
+          <Button type="submit" disabled={sending || !draft.trim()} icon={<SendHorizontal aria-hidden />}>
+            {sending ? "Sending…" : "Send"}
           </Button>
         </div>
+        <p className="mt-2 hidden text-base text-muted sm:block">Press Enter to send. Shift + Enter starts a new line.</p>
       </form>
     </div>
   );
+}
+
+const dayKey = (iso: string) => new Date(iso).toDateString();
+
+// "Today", "Yesterday", or "Monday, November 10"
+function dayLabel(iso: string) {
+  const d = new Date(iso);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return "Today";
+  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
 }

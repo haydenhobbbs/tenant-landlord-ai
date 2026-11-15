@@ -196,7 +196,7 @@ export default function LoginPage() {
           </button>
         </div>
         {mode === "demo" && (
-          <p className="mt-4 text-sm text-muted">
+          <p className="mt-4 text-base text-muted">
             Running without Supabase keys: accounts are saved in this browser only.
           </p>
         )}
