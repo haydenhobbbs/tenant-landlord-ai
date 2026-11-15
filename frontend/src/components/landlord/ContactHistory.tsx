@@ -59,11 +59,11 @@ export function ContactHistory({ requestId, state, refreshKey }: { requestId: st
                     return (
                       <li key={e.id}>
                         <details className="group rounded-lg bg-sunken/60 px-3 py-2">
-                          <summary className="flex cursor-pointer list-none items-center gap-2 text-base">
+                          <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-2 gap-y-1 text-base">
                             <Icon className="size-4 shrink-0 text-landlord-ink" aria-hidden />
                             <span className="font-semibold">{verb}</span>
                             <span className="text-muted">{formatInZone(e.createdAt, state)}</span>
-                            {e.to && <span className="truncate text-sm text-muted">to {e.to}</span>}
+                            {e.to && <span className="min-w-0 text-sm break-all text-muted">to {e.to}</span>}
                             <span className="ml-auto text-sm text-landlord-ink underline group-open:hidden">Show message</span>
                             <span className="ml-auto hidden text-sm text-landlord-ink underline group-open:inline">Hide</span>
                           </summary>

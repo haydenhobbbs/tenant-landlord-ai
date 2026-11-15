@@ -9,7 +9,7 @@
 // Links: /landlord/messages?tenant=<tenantId>, or ?request=<requestId>
 // (opens that request's tenant).
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { ChatThread, PHONE_CHAT_PANEL } from "@/components/ChatThread";
@@ -55,6 +55,37 @@ function Conversation() {
   const unread = useMessageAlerts()?.threads ?? [];
   const unreadFor = (id: string) => unread.find((t) => t.tenantId === id)?.count ?? 0;
   const [lastById, setLastById] = useState<Record<string, ChatMessage | undefined>>({});
+  const list = useRef<HTMLUListElement>(null);
+
+  // Laptops and bigger: the page itself stays still. The contact list gets
+  // its own scroll box that ends at the bottom of the window, and the chat
+  // does the same (ChatThread). Phones keep their own layout.
+  useEffect(() => {
+    const root = document.documentElement;
+    const wide = window.matchMedia("(width >= 48rem)");
+    const fit = () => {
+      const el = list.current;
+      root.style.overflowY = wide.matches ? "hidden" : "";
+      if (!el) return;
+      if (!wide.matches) {
+        el.style.maxHeight = "";
+        return;
+      }
+      let top = 0;
+      for (let n: HTMLElement | null = el; n; n = n.offsetParent as HTMLElement | null) top += n.offsetTop;
+      const below = 16;
+      el.style.maxHeight = `${Math.max(160, Math.floor(window.innerHeight - top - below))}px`;
+    };
+    fit();
+    const watch = new ResizeObserver(() => fit());
+    watch.observe(document.body);
+    window.addEventListener("resize", fit);
+    return () => {
+      watch.disconnect();
+      window.removeEventListener("resize", fit);
+      root.style.overflowY = "";
+    };
+  }, []);
 
   // Everyone who has sent a request, with their address.
   const people = useMemo(() => {
@@ -109,7 +140,7 @@ function Conversation() {
   const open = contacts.find((c) => c.id === openId);
 
   return (
-    <div className="space-y-4 sm:space-y-5">
+    <div className="space-y-4 sm:space-y-5 md:-mt-8 md:space-y-2.5">
       <header className={open ? "hidden lg:block" : ""}>
         <h1 className="text-[1.6rem] leading-tight font-semibold sm:text-[2rem]">Messages</h1>
         <p className="mt-1 text-base text-muted sm:text-lg">One conversation per tenant. New repair requests show up here too.</p>
@@ -137,7 +168,7 @@ function Conversation() {
               <div className="skeleton h-20" />
             </div>
           ) : (
-            <ul className="overflow-hidden rounded-xl border border-line bg-surface">
+            <ul ref={list} className="overflow-hidden rounded-xl border border-line bg-surface md:overflow-y-auto md:overscroll-contain">
               {contacts.map((c) => {
                 const n = unreadFor(c.id);
                 const active = c.id === open?.id;
@@ -196,7 +227,7 @@ function Conversation() {
                 Messages
               </button>
             </div>
-            <div className="flex shrink-0 items-center gap-3.5">
+            <div className="flex shrink-0 items-center gap-3.5 md:-mt-1">
               <span
                 data-role="tenant"
                 aria-hidden

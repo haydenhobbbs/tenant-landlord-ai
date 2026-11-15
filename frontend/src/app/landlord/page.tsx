@@ -354,8 +354,8 @@ function Row({ request: r, children }: { request: MaintenanceRequest; children?:
   return (
     <li className="flex items-center gap-3 rounded-xl border border-line bg-surface p-3.5 sm:p-4">
       <Link href={`/landlord/requests/${encodeURIComponent(r.id)}`} className="min-w-0 flex-1">
-        <span className="block truncate text-base font-semibold sm:text-lg">{r.title}</span>
-        <span className="block truncate text-[0.9rem] text-muted sm:text-base">
+        <span className="block text-base leading-snug break-words font-semibold sm:text-lg">{r.title}</span>
+        <span className="mt-0.5 block text-[0.9rem] leading-snug break-words text-muted sm:text-base">
           {r.unit}
           {r.selected ? ` · ${r.selected.contractor.name}` : ""}
           {when ? ` · ${formatInZone(when, r.property?.state)}` : ""}
