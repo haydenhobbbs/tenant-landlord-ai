@@ -1,5 +1,5 @@
 import { NextResponse, connection } from "next/server";
-import { approveRequest, completeRequest, declineRequest } from "@/lib/pipeline";
+import { approveRequest, completeRequest, declineRequest, handleItMyself } from "@/lib/pipeline";
 import { getRequest } from "@/lib/store";
 import { canSeeRequest, demoFrom, forbidden, getCaller, isRequestLandlord, unauthorized } from "@/lib/serverAuth";
 
@@ -21,7 +21,7 @@ export async function GET(req: Request, ctx: RouteContext<"/api/requests/[id]">)
 //   { action: "complete" }                      job is done
 export async function PATCH(req: Request, ctx: RouteContext<"/api/requests/[id]">) {
   const { id } = await ctx.params;
-  const body = (await req.json()) as { action?: string; offerIndex?: number };
+  const body = (await req.json()) as { action?: string; offerIndex?: number; when?: string; note?: string };
 
   const caller = await getCaller(req, { ...demoFrom(req), role: "landlord" });
   if (!caller) return unauthorized();
@@ -37,9 +37,14 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/requests/[id]"
       return NextResponse.json(await approveRequest(request, body.offerIndex ?? 0));
     case "decline":
       return NextResponse.json(await declineRequest(request));
+    case "self": {
+      // { action: "self", when?, note? } landlord will do the repair personally
+      const result = await handleItMyself(request, { id: caller.id, name: caller.name }, { when: body.when, note: body.note });
+      return "error" in result ? NextResponse.json({ error: result.error }, { status: 409 }) : NextResponse.json(result);
+    }
     case "complete":
       return NextResponse.json(await completeRequest(request));
     default:
-      return NextResponse.json({ error: "action must be approve, decline or complete" }, { status: 400 });
+      return NextResponse.json({ error: "action must be approve, decline, self or complete" }, { status: 400 });
   }
 }

@@ -16,6 +16,7 @@ import {
   searchContractorsOnline,
 } from "./outreach";
 import { listMessages } from "./outreach/db";
+import { addMessage } from "./tenantData";
 import { saveRequest } from "./store";
 import { timeZoneFor } from "./timezone";
 import type { Contractor, ContractorOffer, MaintenanceRequest } from "./types";
@@ -142,4 +143,74 @@ export async function contactExtraContractor(
   // With no email/SMS keys the contact is simulated and replies right away.
   if (reply) await onContractorReply(request.id, clean, reply, channel);
   return { ok: true, contractor: clean };
+}
+
+// ---------- Landlord handles it personally ----------
+// For small jobs ("tighten a cabinet hinge") the landlord can skip contractors.
+// The request becomes "Booked" with the landlord as the repair person, the tenant
+// is told, and any contractor replies that arrive later are only logged.
+
+export async function handleItMyself(
+  request: MaintenanceRequest,
+  landlord: { id: string; name: string },
+  opts: { when?: string; note?: string } = {},
+): Promise<MaintenanceRequest | { error: string }> {
+  if (!OPEN_STATUSES.includes(request.status)) return { error: `This request is already ${request.status}.` };
+  const when = opts.when && !Number.isNaN(Date.parse(opts.when)) ? new Date(opts.when).toISOString() : undefined;
+  const name = landlord.name || "Your landlord";
+  const selected: ContractorOffer = {
+    contractor: { id: "landlord-self", name: `${name} (your landlord)`, trade: request.trade ?? "general", source: "preapproved" },
+    channel: "email",
+    available: true,
+    availableAt: when,
+    aiReason: "Your landlord is handling this repair personally.",
+  };
+  request = await saveRequest({ ...request, selected, scheduledAt: when, status: "scheduled" });
+
+  const timeZone = timeZoneFor(request.property?.state);
+  const whenText = when
+    ? ` on ${new Date(when).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short", timeZone })}`
+    : "";
+  await notify(
+    { userId: request.tenantId, name: request.tenantName },
+    `${name} will take care of "${request.title}" personally${whenText}.`,
+    { link: `/tenant/requests/${request.id}`, requestId: request.id },
+  );
+  const note = opts.note?.trim();
+  if (note && request.tenantId) {
+    await addMessage({
+      id: crypto.randomUUID(), tenantId: request.tenantId, senderId: landlord.id, senderRole: "landlord",
+      senderName: name, body: note.slice(0, 2000), createdAt: new Date().toISOString(),
+    }).catch((err) => console.error("[pipeline] note to tenant failed", err));
+  }
+  return request;
+}
+
+// ---------- Who the AI contacted for a request ----------
+
+export interface ContactLogEntry {
+  id: string;
+  contractorName: string;
+  contractorSource: Contractor["source"];
+  channel: ContractorOffer["channel"];
+  direction: "sent" | "reply";
+  to?: string;
+  body: string;
+  createdAt: string;
+}
+
+export async function contactHistory(requestId: string): Promise<ContactLogEntry[]> {
+  const log = await listMessages(requestId);
+  return log
+    .map((m) => ({
+      id: m.id,
+      contractorName: m.contractor.name,
+      contractorSource: m.contractor.source,
+      channel: m.channel,
+      direction: m.direction === "outbound" ? ("sent" as const) : ("reply" as const),
+      to: m.direction === "outbound" ? m.to : undefined,
+      body: m.body,
+      createdAt: m.createdAt,
+    }))
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }

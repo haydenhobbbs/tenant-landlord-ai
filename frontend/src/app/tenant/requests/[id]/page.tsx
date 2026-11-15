@@ -242,6 +242,12 @@ function statusSummary(r: MaintenanceRequest, when?: string): { headline: string
       };
     case "landlord_approved":
     case "scheduled":
+      if (r.selected?.contractor.id === "landlord-self") {
+        return {
+          headline: when ? `Your landlord is fixing this ${longDateTime(when)}` : "Your landlord is fixing this personally",
+          next: "No contractor needed. Message your landlord if you need to set up a time.",
+        };
+      }
       return {
         headline: when ? `Booked for ${longDateTime(when)}` : "Your repair is booked",
         next: "We’ll text you a reminder the day before. Make sure someone can let them in.",
