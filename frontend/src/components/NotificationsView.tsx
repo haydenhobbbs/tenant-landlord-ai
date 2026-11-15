@@ -18,7 +18,7 @@ function timeAgo(iso: string) {
 
 export function NotificationsView() {
   const { user } = useAuth();
-  const { items, loaded, markAllRead } = useNotifications(user?.id);
+  const { items, loaded, markRead, markAllRead } = useNotifications(user?.id);
   const unread = items.filter((n) => !n.read).length;
 
   // Opening this screen counts as reading them (after a moment, so the
@@ -70,7 +70,11 @@ export function NotificationsView() {
             return (
               <li key={n.id}>
                 {n.link ? (
-                  <Link href={n.link} className="group flex gap-4 p-5 transition-colors duration-200 hover:bg-sunken">
+                  <Link
+                    href={n.link}
+                    onClick={() => !n.read && void markRead(n.id)} // tapping it counts as reading it
+                    className="group flex gap-4 p-5 transition-colors duration-200 hover:bg-sunken"
+                  >
                     {content}
                   </Link>
                 ) : (
