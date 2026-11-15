@@ -218,6 +218,7 @@ export async function getLease(tenantId: string, fallback: { tenantName: string;
           securityDeposit: Number(data.security_deposit ?? 0),
           terms: data.terms ?? DEFAULT_TERMS,
           documentUrl: data.file_url ?? undefined,
+          leaseId: data.id,
         };
       }
     }

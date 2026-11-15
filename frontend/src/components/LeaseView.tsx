@@ -5,7 +5,8 @@
 
 import { useState } from "react";
 import { Download } from "lucide-react";
-import { ButtonLink } from "@/components/ui/Button";
+import { Button, ButtonLink } from "@/components/ui/Button";
+import { authFetch } from "@/lib/authFetch";
 import { formatPrice } from "@/lib/format";
 import type { Lease } from "@/lib/types";
 
@@ -65,7 +66,9 @@ export function LeaseView({ lease }: { lease: Lease }) {
         </dl>
       </section>
 
-      {lease.documentUrl ? (
+      {lease.leaseId ? (
+        <LeasePdfButton leaseId={lease.leaseId} />
+      ) : lease.documentUrl ? (
         <ButtonLink href={lease.documentUrl} target="_blank" variant="secondary" icon={<Download aria-hidden />}>
           Download the signed lease (PDF)
         </ButtonLink>
@@ -74,6 +77,38 @@ export function LeaseView({ lease }: { lease: Lease }) {
           This is a summary. Ask your landlord for the full signed copy if you need it.
         </p>
       )}
+    </div>
+  );
+}
+
+// Opens the lease PDF (generated on the server from the saved lease).
+function LeasePdfButton({ leaseId }: { leaseId: string }) {
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  async function open() {
+    setBusy(true);
+    setFailed(false);
+    // Open the tab first (inside the tap) so phones don't block it as a pop-up.
+    const tab = window.open("", "_blank");
+    try {
+      const res = await authFetch(`/api/leases/${encodeURIComponent(leaseId)}/document`, { cache: "no-store" });
+      if (!res.ok) throw new Error();
+      const url = URL.createObjectURL(await res.blob());
+      if (tab) tab.location.href = url;
+      else window.location.href = url;
+    } catch {
+      tab?.close();
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="space-y-2">
+      <Button variant="secondary" icon={<Download aria-hidden />} onClick={() => void open()} disabled={busy}>
+        {busy ? "Opening…" : "View the full signed lease (PDF)"}
+      </Button>
+      {failed && <p role="alert" className="text-base text-danger-ink">Couldn&apos;t open the lease. Please try again.</p>}
     </div>
   );
 }
