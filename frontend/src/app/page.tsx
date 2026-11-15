@@ -59,7 +59,7 @@ export default function Home() {
                 See one repair
               </a>
             </div>
-            <p className="mt-6 text-[0.95rem] text-white/55">Free for your first property · Works from any phone · No app to install</p>
+            <p className="mt-6 text-[0.95rem] text-white/55">Free for 3 months on your first property · Works from any phone · No app to install</p>
           </div>
 
           {/* Product composite: landlord approval + tenant phone */}
