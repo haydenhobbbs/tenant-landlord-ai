@@ -37,16 +37,36 @@ export function useNotifications(userId: string | null | undefined) {
     };
   }, [userId, load]);
 
-  // C's API marks one at a time (PATCH /api/notifications/:id).
+  // C's API marks one at a time (PATCH /api/notifications/:id). userId tells
+  // the demo (no real accounts) whose notification it is; keepalive lets the
+  // save finish even when tapping the notification opens another page.
+  const save = useCallback(
+    (id: string) =>
+      authFetch(`/api/notifications/${encodeURIComponent(id)}?userId=${encodeURIComponent(userId ?? "")}`, {
+        method: "PATCH",
+        keepalive: true,
+      }).catch(() => null),
+    [userId],
+  );
+
+  const markRead = useCallback(
+    async (id: string) => {
+      setItems((list) => list.map((n) => (n.id === id ? { ...n, read: true } : n)));
+      await save(id);
+      refreshNotifications();
+    },
+    [save],
+  );
+
   const markAllRead = useCallback(async () => {
     const unread = items.filter((n) => !n.read);
     if (!unread.length) return;
     setItems((list) => list.map((n) => ({ ...n, read: true })));
-    await Promise.all(unread.map((n) => authFetch(`/api/notifications/${n.id}`, { method: "PATCH" }).catch(() => null)));
+    await Promise.all(unread.map((n) => save(n.id)));
     refreshNotifications();
-  }, [items]);
+  }, [items, save]);
 
-  return { items, loaded, markAllRead, reload: load };
+  return { items, loaded, markRead, markAllRead, reload: load };
 }
 
 export function useUnreadCount(userId: string | null | undefined) {
