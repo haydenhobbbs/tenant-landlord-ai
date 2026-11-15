@@ -17,6 +17,9 @@ export async function POST(request: Request) {
   const emailId = typeof data?.email_id === "string" ? data.email_id : undefined;
   const fetched = emailId ? await fetchReceivedEmail(emailId) : undefined;
   if (emailId && !fetched) return NextResponse.json({ error: "Could not load the received email" }, { status: 502 });
+  // With Resend configured, a reply must come from Resend (looked up by its id).
+  // Otherwise anyone could post a fake "Yes, $50" reply to this URL.
+  if (!fetched && process.env.RESEND_API_KEY) return NextResponse.json({ error: "email_id is required" }, { status: 400 });
   const source = fetched ?? data;
   const rawFrom = Array.isArray(source?.from) ? source.from[0] : source?.from;
   const fromValue = typeof rawFrom === "string" ? rawFrom : object(rawFrom)?.email;

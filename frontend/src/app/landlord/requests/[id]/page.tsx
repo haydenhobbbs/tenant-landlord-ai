@@ -8,6 +8,7 @@ import { StatusBadge, UrgencyBadge } from "@/components/StatusBadge";
 import { AskOtherContractors } from "@/components/landlord/AskOtherContractors";
 import { useLandlordRequests } from "@/lib/useLandlordRequests";
 import { formatInZone, formatPrice } from "@/lib/format";
+import { authFetch } from "@/lib/authFetch";
 
 export default function RequestDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -22,7 +23,7 @@ export default function RequestDetailPage() {
     if (busy) return;
     setBusy(true); setActionError(""); setNotice("");
     try {
-      const response = await fetch(`/api/requests/${encodeURIComponent(id)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, offerIndex }) });
+      const response = await authFetch(`/api/requests/${encodeURIComponent(id)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, offerIndex }) });
       if (!response.ok) throw new Error("Update failed");
       setNotice(action === "approve" ? "Contractor approved." : "Request declined.");
       await reload();

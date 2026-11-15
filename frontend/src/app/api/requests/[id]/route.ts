@@ -1,13 +1,17 @@
 import { NextResponse, connection } from "next/server";
 import { approveRequest, completeRequest, declineRequest } from "@/lib/pipeline";
 import { getRequest } from "@/lib/store";
+import { canSeeRequest, demoFrom, forbidden, getCaller, isRequestLandlord, unauthorized } from "@/lib/serverAuth";
 
 // GET /api/requests/:id -> one request (the tenant's repair page)
-export async function GET(_req: Request, ctx: RouteContext<"/api/requests/[id]">) {
+export async function GET(req: Request, ctx: RouteContext<"/api/requests/[id]">) {
   await connection();
+  const caller = await getCaller(req, demoFrom(req));
+  if (!caller) return unauthorized();
   const { id } = await ctx.params;
   const request = await getRequest(id);
-  if (!request) return NextResponse.json({ error: "Request not found" }, { status: 404 });
+  // Same answer for "missing" and "not yours", so ids can't be probed.
+  if (!request || !canSeeRequest(caller, request)) return NextResponse.json({ error: "Request not found" }, { status: 404 });
   return NextResponse.json(request);
 }
 
@@ -19,8 +23,11 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/requests/[id]"
   const { id } = await ctx.params;
   const body = (await req.json()) as { action?: string; offerIndex?: number };
 
+  const caller = await getCaller(req, { ...demoFrom(req), role: "landlord" });
+  if (!caller) return unauthorized();
   const request = await getRequest(id);
-  if (!request) return NextResponse.json({ error: "Request not found" }, { status: 404 });
+  if (!request || !canSeeRequest(caller, request)) return NextResponse.json({ error: "Request not found" }, { status: 404 });
+  if (!isRequestLandlord(caller, request)) return forbidden("Only this home's landlord can do that.");
 
   switch (body.action) {
     case "approve":

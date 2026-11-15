@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { MaintenanceRequest } from "./types";
+import { authFetch } from "@/lib/authFetch";
 
 async function fetchRequests(tenantId?: string | null): Promise<MaintenanceRequest[]> {
   const qs = tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : "";
-  const res = await fetch(`/api/requests${qs}`, { cache: "no-store" });
+  const res = await authFetch(`/api/requests${qs}`, { cache: "no-store" });
   if (!res.ok) throw new Error("Couldn't load requests");
   return res.json();
 }

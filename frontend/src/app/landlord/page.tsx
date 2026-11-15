@@ -6,6 +6,7 @@ import { StatusBadge, UrgencyBadge } from "@/components/StatusBadge";
 import { useLandlordRequests } from "@/lib/useLandlordRequests";
 import { formatInZone, formatPrice } from "@/lib/format";
 import type { MaintenanceRequest } from "@/lib/types";
+import { authFetch } from "@/lib/authFetch";
 
 export default function LandlordPage() {
   const { requests, loading, error, reload } = useLandlordRequests();
@@ -17,7 +18,7 @@ export default function LandlordPage() {
     if (busyId) return;
     setBusyId(id); setActionError(""); setNotice("");
     try {
-      const response = await fetch(`/api/requests/${encodeURIComponent(id)}`, {
+      const response = await authFetch(`/api/requests/${encodeURIComponent(id)}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, offerIndex }),
       });

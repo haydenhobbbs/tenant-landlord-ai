@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { inputClass } from "@/components/ui/Field";
 import type { ChatMessage } from "@/lib/types";
 import { useMessageAlerts } from "@/components/MessageAlerts";
+import { authFetch } from "@/lib/authFetch";
 
 interface Props {
   tenantId: string;
@@ -58,7 +59,7 @@ export function ChatThread({ tenantId, me, otherName = "them", timeZone }: Props
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`/api/messages?tenantId=${encodeURIComponent(tenantId)}`, { cache: "no-store" });
+      const res = await authFetch(`/api/messages?tenantId=${encodeURIComponent(tenantId)}`, { cache: "no-store" });
       if (res.ok) {
         const list: ChatMessage[] = await res.json();
         setSeen((prev) => prev ?? new Set(list.map((m) => m.id)));
@@ -90,7 +91,7 @@ export function ChatThread({ tenantId, me, otherName = "them", timeZone }: Props
     setSending(true);
     setError(null);
     try {
-      const res = await fetch("/api/messages", {
+      const res = await authFetch("/api/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tenantId, senderId: me.id, senderRole: me.role, senderName: me.name, body }),

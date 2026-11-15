@@ -5,24 +5,32 @@ import { tenantLink } from "@/lib/invites";
 import { addMessage } from "@/lib/tenantData";
 import { processNewRequest } from "@/lib/pipeline";
 import { listRequests, saveRequest } from "@/lib/store";
+import { demoFrom, getCaller, unauthorized } from "@/lib/serverAuth";
 import type { MaintenanceRequest, NewRequestInput } from "@/lib/types";
 
 // Real AI calls (contractor outreach + legal research) take ~30-60s.
 export const maxDuration = 120;
 
-// GET /api/requests                -> all requests (newest first)
-// GET /api/requests?tenantId=abc   -> just that tenant's requests
-// GET /api/requests?landlordId=xyz -> requests from that landlord's tenants
+// GET /api/requests -> the signed-in tenant's own requests, or the signed-in
+// landlord's tenants' requests. (Query params are only used in local demo mode.)
 export async function GET(req: NextRequest) {
   await connection();
-  const tenantId = req.nextUrl.searchParams.get("tenantId") ?? undefined;
-  const landlordId = req.nextUrl.searchParams.get("landlordId") ?? undefined;
-  return NextResponse.json(await listRequests({ tenantId, landlordId }));
+  const caller = await getCaller(req, demoFrom(req));
+  if (!caller) return unauthorized();
+  return NextResponse.json(
+    await listRequests(caller.role === "tenant" ? { tenantId: caller.id } : { landlordId: caller.id }),
+  );
 }
 
 // POST /api/requests -> tenant submits; AI finds + contacts contractors
 export async function POST(req: Request) {
   const input = (await req.json()) as NewRequestInput;
+  // The request belongs to whoever is signed in, not whoever the page says.
+  const caller = await getCaller(req, { id: input.tenantId, name: input.tenantName, role: "tenant" });
+  if (!caller) return unauthorized("Please sign in to report a problem.");
+  if (caller.role !== "tenant") return NextResponse.json({ error: "Only tenant accounts can report problems." }, { status: 403 });
+  input.tenantId = caller.id;
+  input.tenantName = caller.name || input.tenantName;
 
   if (!input.title?.trim() || !input.description?.trim()) {
     return NextResponse.json({ error: "Title and description are required" }, { status: 400 });

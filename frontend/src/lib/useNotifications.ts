@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { AppNotification } from "./outreach/types";
+import { authFetch } from "@/lib/authFetch";
 
 // Notifications for one user (Teammate C's /api/notifications), refreshed
 // every 10 seconds. Call refreshNotifications() to refresh right away.
@@ -18,7 +19,7 @@ export function useNotifications(userId: string | null | undefined) {
   const load = useCallback(async () => {
     if (!userId) return;
     try {
-      const res = await fetch(`/api/notifications?userId=${encodeURIComponent(userId)}`, { cache: "no-store" });
+      const res = await authFetch(`/api/notifications?userId=${encodeURIComponent(userId)}`, { cache: "no-store" });
       if (res.ok) setItems(await res.json());
     } catch {}
     setLoaded(true);
@@ -41,7 +42,7 @@ export function useNotifications(userId: string | null | undefined) {
     const unread = items.filter((n) => !n.read);
     if (!unread.length) return;
     setItems((list) => list.map((n) => ({ ...n, read: true })));
-    await Promise.all(unread.map((n) => fetch(`/api/notifications/${n.id}`, { method: "PATCH" }).catch(() => null)));
+    await Promise.all(unread.map((n) => authFetch(`/api/notifications/${n.id}`, { method: "PATCH" }).catch(() => null)));
     refreshNotifications();
   }, [items]);
 

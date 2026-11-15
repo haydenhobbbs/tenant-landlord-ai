@@ -13,6 +13,7 @@ import { useProperties } from "@/lib/useProperties";
 import { formatInZone, zoneLabel } from "@/lib/format";
 import { timeZoneFor } from "@/lib/timezone";
 import type { PropertyDetail, PropertyResident, Profile } from "@/lib/types";
+import { authFetch } from "@/lib/authFetch";
 
 export default function PropertyPage() {
   const { id } = useParams<{ id: string }>();
@@ -57,7 +58,7 @@ function HouseholdMessage({ residents, user }: { residents: PropertyResident[]; 
     setSending(true); setError(""); setNotice("");
     const targets = residents.filter((resident) => !failed || failed.includes(resident.tenantId));
     const results = await Promise.allSettled(targets.map(async (resident) => {
-      const response = await fetch("/api/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tenantId: resident.tenantId, senderId: user.id, senderName: user.name, senderRole: "landlord", body: draft.trim() }) });
+      const response = await authFetch("/api/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tenantId: resident.tenantId, senderId: user.id, senderName: user.name, senderRole: "landlord", body: draft.trim() }) });
       if (!response.ok) throw new Error();
     }));
     const failures = targets.filter((_, index) => results[index].status === "rejected");

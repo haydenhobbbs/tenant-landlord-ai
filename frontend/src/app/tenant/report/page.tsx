@@ -12,6 +12,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { useAuth } from "@/lib/auth";
 import { shrinkImage } from "@/lib/shrinkImage";
 import type { Lease, NewRequestInput, Urgency } from "@/lib/types";
+import { authFetch } from "@/lib/authFetch";
 
 const URGENCY: { value: Urgency; label: string; hint: string }[] = [
   { value: "low", label: "It can wait", hint: "A week or two is fine" },
@@ -41,7 +42,7 @@ export default function ReportPage() {
   useEffect(() => {
     if (!user) return;
     const qs = new URLSearchParams({ tenantId: user.id, name: user.name, unit: user.unit ?? "" });
-    fetch(`/api/lease?${qs}`)
+    authFetch(`/api/lease?${qs}`)
       .then((r) => (r.ok ? r.json() : null))
       .then(setLease)
       .catch(() => {});
@@ -83,7 +84,7 @@ export default function ReportPage() {
       photos,
     };
     try {
-      const res = await fetch("/api/requests", {
+      const res = await authFetch("/api/requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),

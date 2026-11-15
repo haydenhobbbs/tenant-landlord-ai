@@ -15,6 +15,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { MessageCircle, X } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import type { UnreadThread } from "@/lib/types";
+import { authFetch } from "@/lib/authFetch";
 
 interface Alerts {
   threads: UnreadThread[];
@@ -50,7 +51,7 @@ export function MessageAlertsProvider({ children }: { children: ReactNode }) {
     if (!role || !userId) return;
     const qs = role === "landlord" ? "role=landlord" : `role=tenant&tenantId=${encodeURIComponent(userId)}`;
     try {
-      const res = await fetch(`/api/messages/unread?${qs}`, { cache: "no-store" });
+      const res = await authFetch(`/api/messages/unread?${qs}`, { cache: "no-store" });
       if (!res.ok) return;
       const list: UnreadThread[] = await res.json();
       setThreads(list);
@@ -90,7 +91,7 @@ export function MessageAlertsProvider({ children }: { children: ReactNode }) {
       // Keep the same array when nothing changes, so nothing re-renders for no reason.
       setThreads((list) => (list.some((t) => t.tenantId === tenantId) ? list.filter((t) => t.tenantId !== tenantId) : list));
       setToasts((list) => (list.some((t) => t.tenantId === tenantId) ? list.filter((t) => t.tenantId !== tenantId) : list));
-      await fetch("/api/messages/read", {
+      await authFetch("/api/messages/read", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tenantId, reader: role }),

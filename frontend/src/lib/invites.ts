@@ -269,3 +269,18 @@ export async function tenantLink(tenantId: string | undefined): Promise<TenantLi
     address: p.address, city: p.city, state: p.state, zip: p.zip, unit: data?.unit ?? "",
   };
 }
+
+/** Ids of every tenant who has joined one of this landlord's properties. */
+export async function landlordTenantIds(landlordId: string): Promise<Set<string>> {
+  if (!supabase) {
+    const mine = new Set(mem.__properties!.filter((p) => p.landlordId === landlordId).map((p) => p.id));
+    return new Set(mem.__leases!.filter((l) => mine.has(l.propertyId)).map((l) => l.tenantId));
+  }
+  if (!isUuid(landlordId)) return new Set();
+  const { data, error } = await supabase
+    .from("leases")
+    .select("tenant_id, properties!inner(landlord_id)")
+    .eq("properties.landlord_id", landlordId);
+  if (error) throw error;
+  return new Set((data ?? []).map((row) => row.tenant_id).filter((id): id is string => !!id));
+}

@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { formatDateTime } from "@/lib/format";
 import type { MaintenanceRequest } from "@/lib/types";
+import { authFetch } from "@/lib/authFetch";
 
 // useSearchParams needs a Suspense boundary in Next 16.
 export default function RequestDetailPage() {
@@ -34,7 +35,7 @@ function RequestDetail() {
   useEffect(() => {
     let active = true;
     const load = async () => {
-      const res = await fetch(`/api/requests/${id}`, { cache: "no-store" }).catch(() => null);
+      const res = await authFetch(`/api/requests/${id}`, { cache: "no-store" }).catch(() => null);
       if (!active || !res) return;
       if (res.status === 404) return setMissing(true);
       if (res.ok) setRequest(await res.json());
