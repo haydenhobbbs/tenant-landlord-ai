@@ -47,8 +47,8 @@ export default function Home() {
           <div className="stagger">
             <h1 className="text-[3.1rem] leading-[0.98] font-bold sm:text-[4.4rem]">Repairs that run themselves.</h1>
             <p className="mt-7 max-w-[34rem] text-xl leading-relaxed text-white/75">
-              Your tenant reports the problem. Tenly texts local repair pros, collects prices and times, and checks your
-              state’s rules. You approve once and everyone gets the date.
+              Your tenant reports the problem. Tenly emails/texts local repair pros, collects prices and times, and checks your
+              state’s rules. You say go, pick a quote, and everyone gets the date.
             </p>
             <div className="mt-10 flex flex-wrap items-center gap-3">
               <PrimaryCta />
@@ -172,7 +172,7 @@ export default function Home() {
                 <span>Landlord</span>
                 <span className="tabular text-white/50">10:02 AM</span>
               </p>
-              <p className={`${heading} mt-3 text-3xl font-semibold`}>Approves once</p>
+              <p className={`${heading} mt-3 text-3xl font-semibold`}>Picks the pro</p>
               <p className="mt-5 text-lg leading-relaxed text-white/80">
                 Picks Rapid Rooter: on the trusted list and there two days sooner. The legal checklist is already ticked.
               </p>
