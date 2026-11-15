@@ -165,6 +165,7 @@ export interface Lease {
   securityDeposit: number; // USD
   terms: { title: string; body: string }[]; // key rules in plain words
   documentUrl?: string; // signed PDF, if uploaded
+  leaseId?: string; // set when this is a real saved lease (its PDF is at /api/leases/:id/document)
 }
 
 // ---------- Landlord properties ----------
