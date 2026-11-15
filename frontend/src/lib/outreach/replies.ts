@@ -5,6 +5,7 @@ import type { ContactChannel, Contractor, ContractorOffer } from "../types";
 import { listMessages, saveMessage } from "./db";
 import { notify } from "./notify";
 import { normalizePhone } from "./send";
+import { refCode } from "./contact";
 
 const addressKey = (address: string) => address.includes("@")
   ? (address.match(/<([^<>]+)>/)?.[1] ?? address).trim().toLowerCase() : normalizePhone(address);
@@ -15,6 +16,12 @@ export async function findThreadByAddress(from: string) {
   const thread = (await listMessages()).find((m) => m.direction === "outbound"
     && [m.to, m.contractor.phone, m.contractor.email].some((a) => a && addressKey(a) === key));
   return thread && { requestId: thread.requestId, contractor: thread.contractor, channel: thread.channel };
+}
+
+/** Match "Ref #4K7Q2M" from a reply's subject back to the email we sent. */
+export async function findThreadByRef(ref: string) {
+  const wanted = ref.toUpperCase();
+  return (await listMessages()).find((m) => m.direction === "outbound" && refCode(m.requestId, m.contractor.id) === wanted);
 }
 
 export async function findThreadByContractor(requestId: string, contractorId: string) {

@@ -268,6 +268,10 @@ function longDateTime(iso: string) {
 function statusSummary(r: MaintenanceRequest, when?: string): { headline: string; next: string } {
   switch (r.status) {
     case "submitted":
+      return {
+        headline: "Your landlord is reviewing your request",
+        next: "They’ll either fix it themselves or have us find a repair person. We’ll let you know either way.",
+      };
     case "finding_contractor":
       return {
         headline: "We’re contacting repair people",
@@ -280,6 +284,12 @@ function statusSummary(r: MaintenanceRequest, when?: string): { headline: string
       };
     case "landlord_approved":
     case "scheduled":
+      if (r.selected?.contractor.id === "landlord-self") {
+        return {
+          headline: when ? `Your landlord is fixing this ${longDateTime(when)}` : "Your landlord is fixing this personally",
+          next: "No contractor needed. Message your landlord if you need to set up a time.",
+        };
+      }
       return {
         headline: when ? `Booked for ${longDateTime(when)}` : "Your repair is booked",
         next: "We’ll text you a reminder the day before. Make sure someone can let them in.",

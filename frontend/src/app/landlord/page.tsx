@@ -23,7 +23,7 @@ export default function LandlordPage() {
   const [notice, setNotice] = useState("");
   const [chosen, setChosen] = useState<TabKey | null>(null);
 
-  async function act(id: string, action: "approve" | "decline" | "complete", offerIndex?: number) {
+  async function act(id: string, action: "find" | "approve" | "decline" | "complete", offerIndex?: number) {
     if (busyId) return;
     setBusyId(id); setActionError(""); setNotice("");
     try {
@@ -32,21 +32,23 @@ export default function LandlordPage() {
         body: JSON.stringify({ action, offerIndex }),
       });
       if (!response.ok) throw new Error("Update failed");
-      setNotice(action === "approve" ? "Contractor approved." : action === "decline" ? "Request declined." : "Job marked complete.");
+      setNotice(action === "find" ? "The AI is contacting your trusted contractor now. Quotes will show up here." : action === "approve" ? "Contractor approved." : action === "decline" ? "Request declined." : "Job marked complete.");
       await reload();
     } catch { setActionError("Your change was not saved. Please try again."); }
     finally { setBusyId(null); }
   }
 
   const pending = requests.filter((r) => r.status === "contractor_suggested");
-  const working = requests.filter((r) => r.status === "submitted" || r.status === "finding_contractor");
+  // New requests wait for the landlord: nothing is emailed until they choose.
+  const fresh = requests.filter((r) => r.status === "submitted");
+  const working = requests.filter((r) => r.status === "finding_contractor");
   const booked = requests.filter((r) => r.status === "landlord_approved" || r.status === "scheduled");
   const history = requests.filter((r) => r.status === "completed" || r.status === "declined");
 
   // Open on whatever needs attention first.
-  const tab: TabKey = chosen ?? (pending.length ? "needs" : working.length + booked.length ? "progress" : "needs");
+  const tab: TabKey = chosen ?? (pending.length + fresh.length ? "needs" : working.length + booked.length ? "progress" : "needs");
   const tabs: { key: TabKey; label: string; count: number }[] = [
-    { key: "needs", label: "Needs you", count: pending.length },
+    { key: "needs", label: "Needs you", count: pending.length + fresh.length },
     { key: "progress", label: "In progress", count: working.length + booked.length },
     { key: "done", label: "Done", count: history.length },
   ];
@@ -111,10 +113,20 @@ export default function LandlordPage() {
           </div>
 
           {tab === "needs" &&
-            (pending.length === 0 ? (
-              <Empty text="Nothing needs your decision right now." sub="New contractor quotes will appear here." />
+            (pending.length + fresh.length === 0 ? (
+              <Empty text="Nothing needs your decision right now." sub="New requests and contractor quotes will appear here." />
             ) : (
               <ul className="grid gap-4 lg:grid-cols-2">
+                {fresh.map((r) => (
+                  <NewCard
+                    key={r.id}
+                    request={r}
+                    busy={busyId !== null}
+                    saving={busyId === r.id}
+                    onFind={() => void act(r.id, "find")}
+                    onDecline={() => void act(r.id, "decline")}
+                  />
+                ))}
                 {pending.map((r) => (
                   <PendingCard
                     key={r.id}
@@ -174,6 +186,74 @@ export default function LandlordPage() {
         </>
       )}
     </div>
+  );
+}
+
+// A new request: nothing has gone to a contractor yet, so the landlord picks how to handle it.
+function NewCard({
+  request: r,
+  busy,
+  saving,
+  onFind,
+  onDecline,
+}: {
+  request: MaintenanceRequest;
+  busy: boolean;
+  saving: boolean;
+  onFind: () => void;
+  onDecline: () => void;
+}) {
+  const href = `/landlord/requests/${encodeURIComponent(r.id)}`;
+  return (
+    <li className="flex flex-col gap-3 rounded-xl border-2 border-landlord-edge/50 bg-surface p-4 sm:p-5">
+      <Link href={href} className="group flex items-start justify-between gap-3">
+        <span className="min-w-0">
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="text-lg leading-tight font-semibold sm:text-xl">{r.title}</span>
+            <UrgencyBadge urgency={r.urgency} />
+          </span>
+          <span className="mt-1 block text-[0.9rem] text-muted sm:text-base">
+            New request · {r.tenantName} · {r.unit}
+          </span>
+        </span>
+        <span className="inline-flex shrink-0 items-center text-base font-semibold text-landlord-ink">
+          Details
+          <ChevronRight className="size-5 transition-transform group-hover:translate-x-0.5" aria-hidden />
+        </span>
+      </Link>
+      <p className="line-clamp-2 text-[0.9rem] text-muted sm:text-base">{r.description}</p>
+      {r.legalGuidance?.summary && (
+        <p className="rounded-lg bg-landlord-soft p-3 text-sm">
+          <span className="font-semibold">Repair rules: </span>
+          {r.legalGuidance.summary}
+        </p>
+      )}
+      <p className="text-[0.9rem] font-medium sm:text-base">Nothing has gone to a contractor yet. How should we handle it?</p>
+      <button
+        type="button"
+        onClick={onFind}
+        disabled={busy}
+        className="min-h-12 cursor-pointer rounded-lg bg-accent px-3 text-base font-bold text-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 sm:text-lg"
+      >
+        {saving ? "Sending…" : "Have the AI contact a contractor"}
+      </button>
+      <div className="grid grid-cols-2 gap-2">
+        <Link
+          href={`${href}#small-job`}
+          className="inline-flex min-h-12 items-center justify-center rounded-lg px-3 text-center text-base leading-tight font-bold ring-1 ring-line-strong hover:bg-sunken"
+        >
+          I&apos;ll fix it myself
+        </Link>
+        <button
+          type="button"
+          onClick={onDecline}
+          disabled={busy}
+          className="min-h-12 cursor-pointer rounded-lg px-3 text-base font-semibold text-muted ring-1 ring-line hover:bg-sunken disabled:opacity-60"
+        >
+          Decline
+        </button>
+      </div>
+    </li>
   );
 }
 

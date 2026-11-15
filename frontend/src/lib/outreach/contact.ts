@@ -9,19 +9,39 @@ export function parseJobTag(subject: string): { requestId: string; contractorId:
   return match ? { requestId: match[1], contractorId: match[2] } : undefined;
 }
 
+/**
+ * Short reference shown in the email subject, e.g. "Ref #4K7Q2M". It's derived
+ * from the request + contractor, so a reply ("Re: … (Ref #4K7Q2M)") can be
+ * matched back even when every demo email goes to one inbox.
+ */
+export function refCode(requestId: string, contractorId: string): string {
+  let h = 0x811c9dc5; // FNV-1a
+  for (const ch of `${requestId}~${contractorId}`) {
+    h ^= ch.charCodeAt(0);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(36).toUpperCase().padStart(6, "0").slice(-6);
+}
+
+export function parseRef(subject: string): string | undefined {
+  return subject.match(/Ref\s*#\s*([A-Z0-9]{6})\b/i)?.[1].toUpperCase();
+}
+
 export async function contactContractor(
-  contractor: Contractor, message: string, channel: ContactChannel, opts: { requestId?: string } = {},
+  contractor: Contractor, message: string, channel: ContactChannel, opts: { requestId?: string; subject?: string } = {},
 ): Promise<{ sent: boolean; reply: string | null }> {
   const context = { requestId: opts.requestId, contractor };
   let result: ContactResult;
   if (channel === "email") {
     const subjectLine = message.match(/^Subject:[ \t]*([^\r\n]*)\r?\n?/i);
-    // The tag survives "Re:" replies, so the email webhook can match a reply to
-    // the right request and contractor even when every demo email goes to one inbox.
-    const tag = opts.requestId ? ` ${jobTag(opts.requestId, contractor.id)}` : "";
+    // A short, consistent subject (opts.subject) beats whatever the AI wrote.
+    // The Ref code survives "Re:" replies, so the email webhook can match a reply
+    // to the right request and contractor even when every demo email goes to one inbox.
+    const base = opts.subject || subjectLine?.[1].trim() || "Repair request";
+    const ref = opts.requestId ? ` (Ref #${refCode(opts.requestId, contractor.id)})` : "";
     result = await sendEmail({
       to: process.env.DEMO_CONTRACTOR_EMAIL || contractor.email || "",
-      subject: `${subjectLine?.[1].trim() || "Maintenance job inquiry"}${tag}`,
+      subject: `${base}${ref}`,
       text: subjectLine ? message.slice(subjectLine[0].length).trimStart() : message,
     }, context);
   } else {

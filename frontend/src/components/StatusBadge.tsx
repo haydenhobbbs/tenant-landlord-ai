@@ -4,10 +4,10 @@ import type { RequestStatus, Urgency } from "@/lib/types";
 // (finding_contractor, contractor_suggested, ...) so nothing breaks when
 // types.ts is updated.
 const STATUS_STYLES: Record<string, { label: string; className: string }> = {
-  submitted: { label: "Sent", className: "bg-sunken text-fg" },
+  submitted: { label: "Landlord reviewing", className: "bg-warn-soft text-warn-ink" },
   finding_contractor: { label: "Finding a repair person", className: "bg-sunken text-fg" },
   awaiting_approval: { label: "Waiting on landlord", className: "bg-warn-soft text-warn-ink" },
-  contractor_suggested: { label: "Waiting on landlord", className: "bg-warn-soft text-warn-ink" },
+  contractor_suggested: { label: "Quote ready", className: "bg-warn-soft text-warn-ink" },
   approved: { label: "Approved", className: "bg-ok-soft text-ok-ink" },
   landlord_approved: { label: "Approved", className: "bg-ok-soft text-ok-ink" },
   scheduled: { label: "Booked", className: "bg-ok-soft text-ok-ink" },

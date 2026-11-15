@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { findThreadByAddress, findThreadByContractor, onContractorReply } from "@/lib/outreach";
-import { parseJobTag } from "@/lib/outreach/contact";
+import { findThreadByAddress, findThreadByContractor, findThreadByRef, onContractorReply } from "@/lib/outreach";
+import { parseJobTag, parseRef } from "@/lib/outreach/contact";
 
 const object = (value: unknown): Record<string, unknown> | undefined =>
   value !== null && typeof value === "object" && !Array.isArray(value)
@@ -37,8 +37,13 @@ export async function POST(request: Request) {
   }
   const text = lines.join("\n").trim();
   // Prefer the [Job …] tag in the subject; fall back to the sender's address.
-  const tagged = typeof source?.subject === "string" ? parseJobTag(source.subject) : undefined;
-  const taggedThread = tagged && await findThreadByContractor(tagged.requestId, tagged.contractorId);
+  // New emails carry "(Ref #4K7Q2M)"; older ones carry "[Job <request>~<contractor>]".
+  const subject = typeof source?.subject === "string" ? source.subject : "";
+  const ref = parseRef(subject);
+  const tagged = parseJobTag(subject);
+  const taggedThread = ref
+    ? await findThreadByRef(ref)
+    : tagged && await findThreadByContractor(tagged.requestId, tagged.contractorId);
   const thread = taggedThread
     ? { requestId: taggedThread.requestId, contractor: taggedThread.contractor }
     : await findThreadByAddress(from);
