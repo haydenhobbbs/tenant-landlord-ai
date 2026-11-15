@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { ExtraContractor } from "@/lib/pipeline";
+import { authFetch } from "@/lib/authFetch";
 
 // Lets the landlord have the AI email more contractors it found online,
 // one click per contractor, beyond the trusted contractor it contacted first.
@@ -14,7 +15,7 @@ export function AskOtherContractors({ requestId, onContacted }: { requestId: str
 
   const load = useCallback(async () => {
     try {
-      const response = await fetch(url, { cache: "no-store" });
+      const response = await authFetch(url, { cache: "no-store" });
       if (!response.ok) throw new Error();
       return (await response.json()) as ExtraContractor[];
     } catch {
@@ -34,7 +35,7 @@ export function AskOtherContractors({ requestId, onContacted }: { requestId: str
     if (sending) return;
     setSending(contractor.id); setMessage(null);
     try {
-      const response = await fetch(url, {
+      const response = await authFetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ contractorId: contractor.id }),

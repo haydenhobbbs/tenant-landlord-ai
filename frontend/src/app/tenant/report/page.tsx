@@ -16,6 +16,7 @@ import { ErrorNote, Field, Input, Textarea } from "@/components/ui/Field";
 import { useAuth } from "@/lib/auth";
 import { shrinkImage } from "@/lib/shrinkImage";
 import type { Lease, NewRequestInput, Urgency } from "@/lib/types";
+import { authFetch } from "@/lib/authFetch";
 
 const STEPS = ["What's wrong", "Photo", "How soon", "Check and send"] as const;
 
@@ -96,7 +97,7 @@ export default function ReportPage() {
   useEffect(() => {
     if (!user) return;
     const qs = new URLSearchParams({ tenantId: user.id, name: user.name, unit: user.unit ?? "" });
-    fetch(`/api/lease?${qs}`)
+    authFetch(`/api/lease?${qs}`)
       .then((r) => (r.ok ? r.json() : null))
       .then(setLease)
       .catch(() => {});
@@ -156,7 +157,7 @@ export default function ReportPage() {
       photos,
     };
     try {
-      const res = await fetch("/api/requests", {
+      const res = await authFetch("/api/requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -166,6 +167,15 @@ export default function ReportPage() {
       try {
         sessionStorage.removeItem(DRAFT_KEY);
       } catch {}
+      // Next.js keeps this page's state when you leave it, so clear the form now
+      // (Hayden). Otherwise the next "Report a problem" would show this request again.
+      setTitle("");
+      setDescription("");
+      setUrgency("medium");
+      setPhotos([]);
+      setFieldError({});
+      setStep(0);
+      setSubmitting(false);
       router.push(`/tenant/requests/${data.id}?new=1`);
     } catch (err) {
       setSubmitting(false);

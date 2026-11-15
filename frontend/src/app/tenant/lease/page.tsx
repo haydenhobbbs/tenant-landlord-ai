@@ -5,6 +5,7 @@ import { LeaseView } from "@/components/LeaseView";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useAuth } from "@/lib/auth";
 import type { Lease } from "@/lib/types";
+import { authFetch } from "@/lib/authFetch";
 
 export default function TenantLeasePage() {
   const { user } = useAuth();
@@ -14,7 +15,7 @@ export default function TenantLeasePage() {
   useEffect(() => {
     if (!user) return;
     const qs = new URLSearchParams({ tenantId: user.id, name: user.name, unit: user.unit ?? "" });
-    fetch(`/api/lease?${qs}`, { cache: "no-store" })
+    authFetch(`/api/lease?${qs}`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then(setLease)
       .catch(() => setFailed(true));

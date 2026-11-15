@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { formatDateTime } from "@/lib/format";
 import type { MaintenanceRequest } from "@/lib/types";
+import { authFetch } from "@/lib/authFetch";
 
 // useSearchParams needs a Suspense boundary in Next 16.
 export default function RequestDetailPage() {
@@ -27,14 +28,16 @@ export default function RequestDetailPage() {
 function RequestDetail() {
   const { id } = useParams<{ id: string }>();
   const justSent = useSearchParams().get("new") === "1";
-  const [request, setRequest] = useState<MaintenanceRequest | null>(null);
+  const [loaded, setRequest] = useState<MaintenanceRequest | null>(null);
+  // Next.js keeps this page's state between visits; never show a different repair's data.
+  const request = loaded?.id === id ? loaded : null;
   const [missing, setMissing] = useState(false);
 
   // Refresh every 5s so the tenant sees "Booked" appear without reloading.
   useEffect(() => {
     let active = true;
     const load = async () => {
-      const res = await fetch(`/api/requests/${id}`, { cache: "no-store" }).catch(() => null);
+      const res = await authFetch(`/api/requests/${id}`, { cache: "no-store" }).catch(() => null);
       if (!active || !res) return;
       if (res.status === 404) return setMissing(true);
       if (res.ok) setRequest(await res.json());

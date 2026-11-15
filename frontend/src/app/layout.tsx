@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   description: "Tenants report issues, AI finds contractors, landlords approve.",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "Tenly", statusBarStyle: "default" },
-  icons: { apple: "/icon-192.png" },
+  icons: { icon: "/icons/tenly.svg", apple: "/icons/tenly-180.png" },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

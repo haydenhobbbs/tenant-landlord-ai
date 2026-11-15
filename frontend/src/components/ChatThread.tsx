@@ -13,14 +13,16 @@ import { Button } from "@/components/ui/Button";
 import { inputClass } from "@/components/ui/Field";
 import type { ChatMessage } from "@/lib/types";
 import { useMessageAlerts } from "@/components/MessageAlerts";
+import { authFetch } from "@/lib/authFetch";
 
 interface Props {
   tenantId: string;
   me: { id: string; role: "tenant" | "landlord"; name: string };
+  timeZone?: string; // the property's time zone (Brenen), e.g. "America/New_York"
   otherName?: string; // shown in the empty state, e.g. "your landlord"
 }
 
-export function ChatThread({ tenantId, me, otherName = "them" }: Props) {
+export function ChatThread({ tenantId, me, otherName = "them", timeZone }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [draft, setDraft] = useState("");
@@ -57,7 +59,7 @@ export function ChatThread({ tenantId, me, otherName = "them" }: Props) {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`/api/messages?tenantId=${encodeURIComponent(tenantId)}`, { cache: "no-store" });
+      const res = await authFetch(`/api/messages?tenantId=${encodeURIComponent(tenantId)}`, { cache: "no-store" });
       if (res.ok) {
         const list: ChatMessage[] = await res.json();
         setSeen((prev) => prev ?? new Set(list.map((m) => m.id)));
@@ -89,7 +91,7 @@ export function ChatThread({ tenantId, me, otherName = "them" }: Props) {
     setSending(true);
     setError(null);
     try {
-      const res = await fetch("/api/messages", {
+      const res = await authFetch("/api/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tenantId, senderId: me.id, senderRole: me.role, senderName: me.name, body }),
@@ -149,7 +151,11 @@ export function ChatThread({ tenantId, me, otherName = "them" }: Props) {
                 </p>
                 <span className="mt-1 px-1 text-base text-muted">
                   <time dateTime={m.createdAt}>
-                    {new Date(m.createdAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
+                    {new Date(m.createdAt).toLocaleTimeString(timeZone ? "en-US" : undefined, {
+                      ...(timeZone ? { timeZone, timeZoneName: "short" as const } : {}),
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
                   </time>
                   {lastMine && <span className="font-semibold">{m.readAt ? " · Seen" : " · Sent"}</span>}
                 </span>
@@ -167,7 +173,7 @@ export function ChatThread({ tenantId, me, otherName = "them" }: Props) {
           </p>
         )}
         <div className="flex items-end gap-3">
-          <label className="flex-1">
+          <label className="min-w-0 flex-1">
             <span className="mb-1.5 block text-base font-semibold">Your message</span>
             <textarea
               value={draft}

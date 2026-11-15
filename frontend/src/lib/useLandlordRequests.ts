@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import type { LandlordRequest } from "@/lib/landlord";
+import { authFetch } from "@/lib/authFetch";
 
 // Only requests from this landlord's own tenants (tenants who joined one of
 // their properties with an invite code).
@@ -20,7 +21,7 @@ export function useLandlordRequests() {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch(`/api/requests?landlordId=${encodeURIComponent(landlordId)}`, { cache: "no-store" });
+      const response = await authFetch(`/api/requests?landlordId=${encodeURIComponent(landlordId)}`, { cache: "no-store" });
       if (!response.ok) throw new Error("Could not load repair requests.");
       const data = (await response.json()) as LandlordRequest[];
       if (current === sequence.current) setRequests(data);

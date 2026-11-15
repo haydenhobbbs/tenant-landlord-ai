@@ -1,5 +1,7 @@
 import { NextResponse, connection, type NextRequest } from "next/server";
+import { landlordTenantIds } from "@/lib/invites";
 import { listUnread } from "@/lib/tenantData";
+import { getCaller, unauthorized } from "@/lib/serverAuth";
 
 // GET /api/messages/unread?role=landlord             -> every tenant thread with unread tenant messages
 // GET /api/messages/unread?role=tenant&tenantId=abc  -> that tenant's unread landlord messages
@@ -13,5 +15,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "role must be landlord or tenant" }, { status: 400 });
   }
   if (role === "tenant" && !tenantId) return NextResponse.json({ error: "tenantId is required" }, { status: 400 });
-  return NextResponse.json(await listUnread(role, tenantId));
+  const caller = await getCaller(req, { id: tenantId ?? "demo-landlord", role });
+  if (!caller) return unauthorized();
+  if (caller.role === "tenant") return NextResponse.json(await listUnread("tenant", caller.id));
+  // A landlord only hears about their own tenants' threads.
+  const threads = await listUnread("landlord");
+  const mine = await landlordTenantIds(caller.id);
+  return NextResponse.json(threads.filter((t) => mine.has(t.tenantId)));
 }

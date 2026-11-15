@@ -1,9 +1,20 @@
 import { NextResponse } from "next/server";
 import { contactContractor, isTrade } from "@/lib/outreach";
+import { getCaller, isRequestLandlord, unauthorized } from "@/lib/serverAuth";
+import { getRequest } from "@/lib/store";
 import type { ContactChannel, Contractor } from "@/lib/types";
 
+// Sends a real email/text, so only a signed-in landlord may use it, and only
+// for one of their own requests. (The app itself contacts contractors through
+// /api/requests/[id]/contractors; this is kept for testing.)
 export async function POST(request: Request) {
+  const caller = await getCaller(request, { id: "demo-landlord", role: "landlord" });
+  if (!caller || caller.role !== "landlord") return unauthorized("Sign in as a landlord.");
   const body = await request.json().catch(() => null);
+  const owned = typeof body?.requestId === "string" ? await getRequest(body.requestId) : undefined;
+  if (!owned || !isRequestLandlord(caller, owned)) {
+    return NextResponse.json({ error: "A requestId for one of your own requests is required" }, { status: 403 });
+  }
   const contractor = body?.contractor;
   if (!contractor || typeof contractor.id !== "string" || !contractor.id.trim()
     || typeof contractor.name !== "string" || !contractor.name.trim()

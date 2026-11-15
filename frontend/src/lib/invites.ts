@@ -11,18 +11,14 @@
 // Uses the service-role client from store.ts. Never import this in client code.
 
 import { isUuid, supabase } from "./store";
-import type { Property } from "./types";
+import type { InviteProperty, Property } from "./types";
+export type { InviteProperty } from "./types";
 
 export interface PropertyInput {
   address: string;
   city: string;
   state: string;
   zip: string;
-}
-
-export interface InviteProperty extends Property {
-  inviteCode: string;
-  tenants: { id: string; name: string; unit: string }[];
 }
 
 /** What a tenant sees before joining: enough to recognize the place, nothing private. */
@@ -68,9 +64,40 @@ export function normalizeCode(raw: string): string {
 const mem = globalThis as unknown as {
   __properties?: (Property & { inviteCode: string })[];
   __leases?: { tenantId: string; tenantName: string; propertyId: string; unit: string }[];
+  __inviteDemoSeeded?: boolean;
 };
 mem.__properties ??= [];
 mem.__leases ??= [];
+
+function newMemoryCode(address: string): string {
+  let code = newCode(address);
+  while (mem.__properties!.some((property) => property.inviteCode === code)) code = newCode(address);
+  return code;
+}
+
+// Properties, joins, tenant links and resident summaries all use these same rows.
+// Seed once so moving a demo tenant to another home does not restore their old lease.
+if (!supabase && !mem.__inviteDemoSeeded) {
+  const homes = [
+    { id: "demo-maple", address: "1420 Maple Ave", city: "Columbus", state: "OH", zip: "43215", tenants: [{ id: "demo-jordan", name: "Jordan Lee", unit: "Apt 3B" }] },
+    { id: "demo-riverside", address: "88 Riverside Dr", city: "Austin", state: "TX", zip: "78704", tenants: [{ id: "demo-sam", name: "Sam Rivera", unit: "Unit 2" }, { id: "demo-priya", name: "Priya Shah", unit: "Unit 2" }] },
+    { id: "demo-pine", address: "503 Pine St", city: "Denver", state: "CO", zip: "80203", tenants: [{ id: "demo-alex", name: "Alex Kim", unit: "Unit 1" }] },
+  ];
+  // Also fill codes on any existing local properties from before invite support.
+  for (const property of mem.__properties) property.inviteCode ||= newMemoryCode(property.address);
+  for (const { tenants, ...home } of homes) {
+    if (!mem.__properties.some((property) => property.id === home.id)) {
+      mem.__properties.push({ ...home, landlordId: "demo-landlord", inviteCode: newMemoryCode(home.address) });
+    }
+    for (const tenant of tenants) {
+      if (!mem.__leases.some((lease) => lease.tenantId === tenant.id)) {
+        mem.__leases.push({ tenantId: tenant.id, tenantName: tenant.name, propertyId: home.id, unit: tenant.unit });
+      }
+    }
+  }
+  mem.__inviteDemoSeeded = true;
+}
+
 
 // ---------- Landlord side ----------
 
@@ -128,7 +155,7 @@ export async function createProperty(landlordId: string, input: PropertyInput): 
     zip: input.zip.trim(),
   };
   if (!supabase) {
-    const p = { id: crypto.randomUUID(), landlordId, ...clean, inviteCode: newCode(clean.address) };
+    const p = { id: crypto.randomUUID(), landlordId, ...clean, inviteCode: newMemoryCode(clean.address) };
     mem.__properties!.push(p);
     return { ...p, tenants: [] };
   }
@@ -241,4 +268,19 @@ export async function tenantLink(tenantId: string | undefined): Promise<TenantLi
     propertyId: p.id, landlordId: p.landlord_id, landlordName: landlord?.name || "Your landlord",
     address: p.address, city: p.city, state: p.state, zip: p.zip, unit: data?.unit ?? "",
   };
+}
+
+/** Ids of every tenant who has joined one of this landlord's properties. */
+export async function landlordTenantIds(landlordId: string): Promise<Set<string>> {
+  if (!supabase) {
+    const mine = new Set(mem.__properties!.filter((p) => p.landlordId === landlordId).map((p) => p.id));
+    return new Set(mem.__leases!.filter((l) => mine.has(l.propertyId)).map((l) => l.tenantId));
+  }
+  if (!isUuid(landlordId)) return new Set();
+  const { data, error } = await supabase
+    .from("leases")
+    .select("tenant_id, properties!inner(landlord_id)")
+    .eq("properties.landlord_id", landlordId);
+  if (error) throw error;
+  return new Set((data ?? []).map((row) => row.tenant_id).filter((id): id is string => !!id));
 }

@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 import { UnreadBadge, useMessageAlerts } from "@/components/MessageAlerts";
 
 const links = [
+  { href: "/landlord/properties", label: "My properties" },
   { href: "/landlord", label: "Requests" },
-  { href: "/landlord/properties", label: "Properties & invites" },
   { href: "/landlord/contractors", label: "Trusted contractors" },
   { href: "/landlord/messages", label: "Messages" },
   { href: "/landlord/lease", label: "Lease" },
@@ -30,7 +30,7 @@ export function LandlordShell({ children }: { children: React.ReactNode }) {
       </div>
       <nav aria-label="Landlord sections" className="flex flex-wrap gap-2">
         {links.map((link) => {
-          const active = link.href === "/landlord" ? pathname === link.href || pathname.startsWith("/landlord/requests/") : pathname === link.href;
+          const active = link.href === "/landlord" ? pathname === link.href || pathname.startsWith("/landlord/requests/") : pathname === link.href || pathname.startsWith(`${link.href}/`);
           return <Link key={link.href} href={link.href} aria-current={active ? "page" : undefined} className={`inline-flex min-h-11 items-center gap-2 rounded-lg px-4 py-3 text-[0.95rem] font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-edge ${active ? "bg-accent text-on-accent" : "bg-surface text-muted ring-1 ring-line hover:bg-accent-soft hover:text-fg"}`}>{link.label}{link.href === "/landlord/messages" && <UnreadBadge count={unreadTenants} />}</Link>;
         })}
       </nav>

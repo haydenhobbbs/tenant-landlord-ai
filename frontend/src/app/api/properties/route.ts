@@ -1,26 +1,27 @@
-import { NextResponse, connection } from "next/server";
-import { createProperty, listLandlordProperties } from "@/lib/invites";
+import { connection, NextResponse } from "next/server";
+import { z } from "zod";
+import { createProperty, listProperties } from "@/lib/properties";
+import { propertyInput } from "@/lib/property-input";
 import { getCaller } from "@/lib/serverAuth";
 
-// GET /api/properties -> the signed-in landlord's properties, invite codes and tenants
 export async function GET(req: Request) {
   await connection();
   const demoId = new URL(req.url).searchParams.get("landlordId") ?? undefined;
   const caller = await getCaller(req, { id: demoId, role: "landlord" });
   if (caller?.role !== "landlord") return NextResponse.json({ error: "Sign in as a landlord" }, { status: 401 });
-  return NextResponse.json(await listLandlordProperties(caller.id));
+  try { return NextResponse.json(await listProperties(caller.id)); }
+  catch { return NextResponse.json({ error: "Could not load properties. Try again." }, { status: 500 }); }
 }
 
-// POST /api/properties { address, city, state, zip } -> new property with its invite code
 export async function POST(req: Request) {
-  const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
-  const caller = await getCaller(req, { id: typeof body.landlordId === "string" ? body.landlordId : undefined, role: "landlord" });
+  let body: unknown;
+  try { body = await req.json(); }
+  catch { return NextResponse.json({ error: "Send valid property details." }, { status: 400 }); }
+  const demoId = body && typeof body === "object" && "landlordId" in body && typeof body.landlordId === "string" ? body.landlordId : undefined;
+  const caller = await getCaller(req, { id: demoId, role: "landlord" });
   if (caller?.role !== "landlord") return NextResponse.json({ error: "Sign in as a landlord" }, { status: 401 });
-
-  const field = (k: string) => (typeof body[k] === "string" ? (body[k] as string).trim() : "");
-  const input = { address: field("address"), city: field("city"), state: field("state"), zip: field("zip") };
-  if (!input.address || !input.city || !/^[A-Za-z]{2}$/.test(input.state) || !input.zip) {
-    return NextResponse.json({ error: "Enter the street address, city, 2-letter state and ZIP." }, { status: 400 });
-  }
-  return NextResponse.json(await createProperty(caller.id, input), { status: 201 });
+  const parsed = propertyInput.safeParse(body);
+  if (!parsed.success) return NextResponse.json({ error: "Enter a street address, city, supported two-letter US state, and five-digit ZIP code.", fields: z.flattenError(parsed.error).fieldErrors }, { status: 400 });
+  try { return NextResponse.json(await createProperty(caller.id, parsed.data), { status: 201 }); }
+  catch { return NextResponse.json({ error: "Your property was not saved. Try again." }, { status: 500 }); }
 }

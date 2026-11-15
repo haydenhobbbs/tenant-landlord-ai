@@ -1,203 +1,102 @@
 "use client";
 
-// 🏠 PROPERTIES & INVITES: how a landlord gets their tenants into Tenly.
-// Each property has a code (e.g. MAPLE-4821) and a link (/join/MAPLE-4821).
-// Tenants who join show up here, and their repair requests come to this landlord.
-
-import { useCallback, useEffect, useState } from "react";
-import { Check, Copy, Plus, Share2, Users } from "lucide-react";
+import Link from "next/link";
+import { useRef, useState } from "react";
+import { ArrowRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { ErrorNote, Field, Input } from "@/components/ui/Field";
-import { useAuth } from "@/lib/auth";
+import { ErrorNote, Field, Input, inputClass } from "@/components/ui/Field";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { useMessageAlerts } from "@/components/MessageAlerts";
+import { PropertyLocalTime } from "@/components/landlord/PropertyLocalTime";
+import { PropertyInvite } from "@/components/landlord/PropertyInvite";
 import { authFetch } from "@/lib/authFetch";
-import type { InviteProperty } from "@/lib/invites";
+import { propertyInput, STATE_NAMES } from "@/lib/property-input";
+import { zoneLabel } from "@/lib/format";
+import { useProperties } from "@/lib/useProperties";
+import type { PropertySummary } from "@/lib/types";
 
-const EMPTY = { address: "", city: "", state: "", zip: "" };
+const empty = { address: "", city: "", state: "", zip: "" };
+type InputKey = keyof typeof empty;
 
+// State selection uses the browser native select, matching the UX contract.
 export default function PropertiesPage() {
-  const { user } = useAuth();
-  const [properties, setProperties] = useState<InviteProperty[] | null>(null);
-  const [loadError, setLoadError] = useState("");
-  const [form, setForm] = useState(EMPTY);
-  const [showForm, setShowForm] = useState(false);
+  const { data, setData, error, clearError, loading, reload, user } = useProperties();
+  const properties = Array.isArray(data) ? data : [];
+  const alerts = useMessageAlerts();
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState(empty);
+  const [errors, setErrors] = useState<Partial<Record<InputKey, string>>>({});
+  const [saveError, setSaveError] = useState("");
   const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState("");
-  const landlordId = user?.role === "landlord" ? user.id : null;
+  const [notice, setNotice] = useState("");
+  const form = useRef<HTMLFormElement>(null);
+  const addButton = useRef<HTMLButtonElement>(null);
+  const states = [...new Set(properties.map((property) => property.state))].sort((a, b) => (STATE_NAMES[a] ?? a).localeCompare(STATE_NAMES[b] ?? b));
 
-  const load = useCallback(async () => {
-    if (!landlordId) return;
-    try {
-      const res = await authFetch(`/api/properties?landlordId=${encodeURIComponent(landlordId)}`, { cache: "no-store" });
-      if (!res.ok) throw new Error();
-      const data = (await res.json()) as InviteProperty[];
-      setProperties(data);
-      setShowForm((open) => open || data.length === 0);
-    } catch {
-      setLoadError("Couldn't load your properties. Refresh to try again.");
+  async function save(event: React.FormEvent) {
+    event.preventDefault();
+    if (saving || !user) return;
+    const result = propertyInput.safeParse(draft);
+    if (!result.success) {
+      const next: Partial<Record<InputKey, string>> = {};
+      for (const issue of result.error.issues) next[issue.path[0] as InputKey] ??= issue.message;
+      setErrors(next);
+      form.current?.querySelector<HTMLElement>(`[name="${Object.keys(next)[0]}"]`)?.focus();
+      return;
     }
-  }, [landlordId]);
-
-  useEffect(() => {
-    void Promise.resolve().then(load);
-  }, [load]);
-
-  async function addProperty(e: React.FormEvent) {
-    e.preventDefault();
-    if (saving || !landlordId) return;
-    setSaving(true);
-    setFormError("");
+    setErrors({}); setSaveError(""); setSaving(true);
     try {
-      const res = await authFetch("/api/properties", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, landlordId }),
-      });
-      const data = (await res.json().catch(() => ({}))) as InviteProperty & { error?: string };
-      if (!res.ok) throw new Error(data.error || "Couldn't save the property. Try again.");
-      setProperties((list) => [...(list ?? []), data]);
-      setForm(EMPTY);
-      setShowForm(false);
-    } catch (error) {
-      setFormError((error as Error).message);
-    } finally {
-      setSaving(false);
-    }
+      const response = await authFetch("/api/properties", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ landlordId: user.id, ...result.data }) });
+      const property: PropertySummary & { error?: string } = await response.json();
+      if (!response.ok) throw new Error(property.error || "Your property was not saved. Try again.");
+      setData((current) => [...(Array.isArray(current) ? current : []), property]);
+      clearError();
+      setNotice(`${property.address} added. Invite code: ${property.inviteCode}. Times for this home use ${zoneLabel(property.state)}.`);
+      setDraft(empty); setAdding(false);
+      requestAnimationFrame(() => addButton.current?.focus());
+    } catch (reason) { setSaveError(reason instanceof Error ? reason.message : "Your property was not saved. Check your connection and try again."); }
+    finally { setSaving(false); }
   }
 
-  const set = (key: keyof typeof EMPTY) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm((f) => ({ ...f, [key]: e.target.value }));
-
-  return (
-    <div className="space-y-7">
-      <header>
-        <h1 className="text-3xl font-bold">Properties &amp; invites</h1>
-        <p className="mt-2 max-w-2xl text-lg text-muted">
-          Give your tenants the code or link for their home. Once they join, their repair requests come straight to you.
-        </p>
-      </header>
-
-      {loadError && <ErrorNote>{loadError}</ErrorNote>}
-      {!properties && !loadError && <p role="status" className="text-muted">Loading your properties…</p>}
-
-      {properties?.map((p) => <PropertyCard key={p.id} property={p} />)}
-
-      {properties && !showForm && (
-        <Button variant="secondary" size="md" icon={<Plus aria-hidden />} onClick={() => setShowForm(true)}>
-          Add another property
-        </Button>
-      )}
-
-      {properties && showForm && (
-        <section aria-labelledby="add-property" className="rounded-xl border border-landlord-edge/40 bg-landlord-soft p-5 sm:p-6">
-          <h2 id="add-property" className="text-xl font-bold">
-            {properties.length === 0 ? "Add your first property" : "Add a property"}
-          </h2>
-          <p className="mt-1 text-muted">We&apos;ll make an invite code for it right away.</p>
-          <form noValidate onSubmit={addProperty} className="mt-5 grid gap-4 sm:grid-cols-6">
-            <Field label="Street address" className="sm:col-span-6">
-              <Input value={form.address} onChange={set("address")} placeholder="418 Maple Street" autoComplete="street-address" required />
-            </Field>
-            <Field label="City" className="sm:col-span-3">
-              <Input value={form.city} onChange={set("city")} placeholder="Austin" autoComplete="address-level2" required />
-            </Field>
-            <Field label="State" hint="2 letters" className="sm:col-span-1">
-              <Input value={form.state} onChange={set("state")} placeholder="TX" maxLength={2} autoComplete="address-level1" className="uppercase" required />
-            </Field>
-            <Field label="ZIP" className="sm:col-span-2">
-              <Input value={form.zip} onChange={set("zip")} placeholder="78704" inputMode="numeric" autoComplete="postal-code" required />
-            </Field>
-            <div className="space-y-3 sm:col-span-6">
-              <ErrorNote>{formError}</ErrorNote>
-              <div className="flex flex-wrap gap-3">
-                <Button type="submit" size="md" disabled={saving}>{saving ? "Saving…" : "Save and get invite code"}</Button>
-                {properties.length > 0 && (
-                  <Button variant="quiet" size="md" onClick={() => { setShowForm(false); setFormError(""); }}>Cancel</Button>
-                )}
-              </div>
-            </div>
-          </form>
-        </section>
-      )}
-    </div>
-  );
-}
-
-function PropertyCard({ property: p }: { property: InviteProperty }) {
-  const [copied, setCopied] = useState<"link" | "code" | null>(null);
-  const link = typeof window === "undefined" ? `/join/${p.inviteCode}` : `${window.location.origin}/join/${p.inviteCode}`;
-  const canShare = typeof navigator !== "undefined" && "share" in navigator;
-
-  async function copy(what: "link" | "code") {
-    try {
-      await navigator.clipboard.writeText(what === "link" ? link : p.inviteCode);
-      setCopied(what);
-      setTimeout(() => setCopied(null), 2000);
-    } catch {
-      // Clipboard blocked: the code and link are on screen to copy by hand.
-    }
+  function control(key: InputKey) {
+    return { name: key, value: draft[key], disabled: saving, "aria-invalid": !!errors[key], "aria-describedby": errors[key] ? `${key}-error` : undefined,
+      onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => { setDraft({ ...draft, [key]: event.target.value }); setErrors({ ...errors, [key]: undefined }); } };
   }
+  function fieldError(key: InputKey) { return errors[key] ? <span id={`${key}-error`} className="block text-sm text-danger-ink">{errors[key]}</span> : null; }
 
-  async function share() {
-    try {
-      await navigator.share({
-        title: "Join your home on Tenly",
-        text: `Report repairs for ${p.address} on Tenly. Use code ${p.inviteCode} or open this link:`,
-        url: link,
-      });
-    } catch {
-      // Closed the share sheet: nothing to do.
-    }
-  }
-
-  return (
-    <article className="rounded-xl border border-line bg-surface p-5 shadow-card sm:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold">{p.address}</h2>
-          <p className="text-lg text-muted">{p.city}, {p.state} {p.zip}</p>
-        </div>
-        <p className="inline-flex items-center gap-2 rounded-full bg-sunken px-3 py-1 text-base font-semibold">
-          <Users className="size-4" aria-hidden />
-          {p.tenants.length === 1 ? "1 tenant" : `${p.tenants.length} tenants`}
-        </p>
-      </div>
-
-      <div className="mt-5 grid gap-4 rounded-lg bg-landlord-soft p-4 sm:grid-cols-[auto_1fr] sm:items-center sm:gap-6">
-        <div>
-          <p className="text-sm font-semibold text-muted">Invite code</p>
-          <p className="tabular font-mono text-3xl font-bold tracking-wider sm:text-4xl">{p.inviteCode}</p>
-        </div>
-        <div className="min-w-0 space-y-3">
-          <p className="truncate text-base text-muted" title={link}>{link}</p>
-          <div className="flex flex-wrap gap-2">
-            <Button size="md" icon={copied === "link" ? <Check aria-hidden /> : <Copy aria-hidden />} onClick={() => void copy("link")}>
-              {copied === "link" ? "Link copied" : "Copy invite link"}
-            </Button>
-            <Button variant="secondary" size="md" onClick={() => void copy("code")}>
-              {copied === "code" ? "Code copied" : "Copy code"}
-            </Button>
-            {canShare && (
-              <Button variant="secondary" size="md" icon={<Share2 aria-hidden />} onClick={() => void share()}>
-                Share
-              </Button>
-            )}
+  return <div className="space-y-7">
+    <PageHeader title="My properties" intro="See residents, messages, and repairs for each home. Share its invite code or link to let tenants join." action={!adding && <Button ref={addButton} disabled={loading} onClick={() => { setAdding(true); setNotice(""); }} icon={<Plus aria-hidden />}>Add a property</Button>} />
+    {notice && <p role="status" className="rounded-xl bg-ok-soft p-4 text-ok-ink">{notice}</p>}
+    {adding && <section aria-labelledby="add-property" className="rounded-xl border border-line bg-surface p-5 sm:p-6">
+      <h2 id="add-property" className="text-2xl font-semibold">Add a property</h2>
+      <p className="mt-1 text-muted">We&apos;ll make an invite code for it right away.</p>
+      <form ref={form} noValidate onSubmit={save} className="mt-5 space-y-5" aria-busy={saving}>
+        <Field label="Street address"><Input autoFocus autoComplete="street-address" maxLength={200} {...control("address")} />{fieldError("address")}</Field>
+        <div className="grid gap-5 sm:grid-cols-2"><Field label="City"><Input autoComplete="address-level2" maxLength={100} {...control("city")} />{fieldError("city")}</Field>
+          <Field label="State"><select className={inputClass} autoComplete="address-level1" {...control("state")}><option value="">Choose a state</option>{Object.entries(STATE_NAMES).sort((a, b) => a[1].localeCompare(b[1])).map(([code, name]) => <option key={code} value={code}>{name}</option>)}</select>{fieldError("state")}</Field></div>
+        <Field label="ZIP code"><Input inputMode="numeric" autoComplete="postal-code" maxLength={5} {...control("zip")} />{fieldError("zip")}</Field>
+        {draft.state && <p className="rounded-lg bg-landlord-soft p-4 text-landlord-ink">Times for this home use {zoneLabel(draft.state)}.</p>}
+        <ErrorNote>{saveError}</ErrorNote>
+        <div className="flex flex-wrap gap-3"><Button type="submit" disabled={saving} className="min-w-48">{saving ? "Saving…" : "Save and get invite code"}</Button><Button variant="secondary" disabled={saving} onClick={() => { setAdding(false); requestAnimationFrame(() => addButton.current?.focus()); }}>Cancel</Button></div>
+      </form>
+    </section>}
+    {loading && <p role="status" className="rounded-xl border border-line bg-surface p-6">Loading properties…</p>}
+    {error && <div className="space-y-3"><ErrorNote>{error}</ErrorNote><Button variant="secondary" onClick={reload}>Try again</Button></div>}
+    {!loading && !error && properties.length === 0 && <div className="rounded-xl border border-dashed border-line-strong bg-surface p-7"><h2 className="text-xl font-semibold">Your homes will appear here</h2><p className="mt-2 text-muted">Add your first property to keep its residents and repairs together.</p></div>}
+    {!loading && !error && states.map((state) => <section key={state} aria-labelledby={`state-${state}`} className="space-y-4">
+      <h2 id={`state-${state}`} className="text-xl font-semibold">{STATE_NAMES[state] ?? state} <span className="font-normal text-muted">· {zoneLabel(state)}</span></h2>
+      <ul className="grid gap-4 lg:grid-cols-2">{properties.filter((property) => property.state === state).sort((a, b) => a.city.localeCompare(b.city) || a.address.localeCompare(b.address)).map((property) => {
+        const unread = alerts?.threads.filter((thread) => property.residents.some((resident) => resident.tenantId === thread.tenantId)).reduce((sum, thread) => sum + thread.count, 0) ?? 0;
+        return <li key={property.id}><article className="h-full space-y-5 rounded-xl border border-line bg-surface p-5 shadow-card sm:p-6">
+          <div className="min-w-0 flex-1 space-y-3"><div><h3 className="break-words text-2xl font-semibold text-landlord-ink"><Link href={`/landlord/properties/${encodeURIComponent(property.id)}`} className="rounded underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-edge">{property.address}</Link></h3><p className="mt-1 text-muted">{property.city}, {property.state} {property.zip}</p></div>
+            <p className="text-base text-landlord-ink"><PropertyLocalTime state={property.state} /></p>
+            <div><p className="font-semibold">{property.residents.length} {property.residents.length === 1 ? "resident" : "residents"}</p>{property.residents.length ? <ul className="mt-1 space-y-1">{property.residents.map((resident) => <li key={resident.tenantId} className="flex flex-wrap justify-between gap-x-3 text-muted"><span className="break-words">{resident.name}</span><span>{resident.unit || "Unit not set"}</span></li>)}</ul> : <p className="text-muted">No one has joined yet. Send them the link or code below.</p>}</div>
+            <div className="flex flex-wrap gap-2"><span className="rounded-lg bg-landlord-soft px-3 py-1 text-sm font-semibold text-landlord-ink">{property.openRequestCount} open {property.openRequestCount === 1 ? "repair" : "repairs"}</span>{unread > 0 && <span className="rounded-lg bg-warn-soft px-3 py-1 text-sm font-semibold text-warn-ink">{unread} unread {unread === 1 ? "message" : "messages"}</span>}</div>
           </div>
-        </div>
-      </div>
-
-      <h3 className="mt-5 text-lg font-bold">Tenants</h3>
-      {p.tenants.length === 0 ? (
-        <p className="mt-1 text-muted">No one has joined yet. Send them the link or code above.</p>
-      ) : (
-        <ul className="mt-2 divide-y divide-line">
-          {p.tenants.map((t) => (
-            <li key={t.id} className="flex justify-between gap-3 py-2 text-lg">
-              <span className="font-semibold">{t.name}</span>
-              <span className="text-muted">{t.unit || "Unit not set"}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </article>
-  );
+          <PropertyInvite property={property} />
+          <Link href={`/landlord/properties/${encodeURIComponent(property.id)}`} aria-label={`Open ${property.address}`} className="inline-flex min-h-11 items-center gap-2 rounded-lg font-semibold text-landlord-ink underline underline-offset-4 hover:bg-landlord-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-edge">Open property <ArrowRight aria-hidden className="size-5" /></Link>
+        </article></li>;
+      })}</ul>
+    </section>)}
+  </div>;
 }
