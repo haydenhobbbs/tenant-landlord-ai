@@ -51,7 +51,7 @@ export function BottomTabBar({
     <nav
       aria-label="Main"
       data-role={role}
-      className="fixed inset-x-0 bottom-0 z-40 w-full max-w-[100vw] border-t border-line bg-surface/95 pr-[max(0.5rem,env(safe-area-inset-right))] pb-[max(0.85rem,calc(env(safe-area-inset-bottom)+0.35rem))] pl-[max(0.5rem,env(safe-area-inset-left))] backdrop-blur md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 w-full max-w-[100vw] border-t border-line bg-surface/95 pr-[max(0.5rem,env(safe-area-inset-right))] pb-[max(0.75rem,env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))] backdrop-blur md:hidden"
     >
       <ul className="mx-auto grid max-w-lg" style={{ gridTemplateColumns: `repeat(${links.length}, minmax(0, 1fr))` }}>
         {links.map((t) => {
@@ -62,7 +62,7 @@ export function BottomTabBar({
               <Link
                 href={t.href}
                 aria-current={active ? "page" : undefined}
-                className={`relative flex min-h-14 flex-col items-center justify-center gap-0.5 pt-1.5 text-[0.75rem] font-semibold transition-colors ${
+                className={`relative flex h-[3.25rem] flex-col items-center justify-start gap-1 pt-2 pb-0.5 text-[0.75rem] leading-tight font-semibold transition-colors ${
                   active ? "text-accent-ink" : "text-muted"
                 }`}
               >
