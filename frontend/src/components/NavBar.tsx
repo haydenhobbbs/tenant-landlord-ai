@@ -148,9 +148,6 @@ export default function NavBar() {
             href={`/${user.role}/notifications`}
             aria-label={unread ? `Notifications, ${unread} new` : "Notifications"}
             className={`relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg transition-colors ${
-              // Landlords on computers: Notifications is under More (tablets keep the bell)
-              user.role === "landlord" ? "lg:hidden" : ""
-            } ${
               pathname.startsWith(`/${user.role}/notifications`)
                 ? "bg-white/10 text-white shadow-[inset_0_-2px_0_var(--nav-accent)]"
                 : "text-white/70 hover:bg-white/10 hover:text-white"
