@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Building2, CalendarDays, FileText, Home, LayoutGrid, MessageCircle, Settings, Wrench, type LucideIcon } from "lucide-react";
+import { Bell, Building2, CalendarDays, FileText, Home, LayoutGrid, MessageCircle, Settings, Wrench, UserCheck, type LucideIcon } from "lucide-react";
 import { BottomTabBar } from "@/components/BottomTabBar";
 import { TenlyLogo } from "@/components/TenlyLogo";
 import { homeFor, useAuth, type Role } from "@/lib/auth";
@@ -20,7 +20,13 @@ const LINKS: Record<Role, NavLink[]> = {
     { href: "/tenant/settings", label: "Settings", icon: Settings },
   ],
   landlord: [
-    { href: "/landlord", label: "Home", icon: Home, exact: true },
+    // Same top bar as tenants, with every landlord section (Nermin).
+    { href: "/landlord", label: "Requests", icon: Wrench, exact: true },
+    { href: "/landlord/properties", label: "Properties", icon: Building2 },
+    { href: "/landlord/messages", label: "Messages", icon: MessageCircle },
+    { href: "/landlord/calendar", label: "Calendar", icon: CalendarDays },
+    { href: "/landlord/contractors", label: "Contractors", icon: UserCheck },
+    { href: "/landlord/lease", label: "Leases", icon: FileText },
     { href: "/landlord/settings", label: "Settings", icon: Settings },
   ],
 };
@@ -101,7 +107,7 @@ export default function NavBar() {
                   <Link
                     href={l.href}
                     aria-current={active ? "page" : undefined}
-                    className={`flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-lg px-2 text-sm font-medium transition-colors duration-200 sm:flex-row sm:gap-2 sm:px-3 sm:text-[0.95rem] ${
+                    className={`flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-lg px-2 text-sm font-medium transition-colors duration-200 sm:flex-row sm:gap-2 sm:px-3 sm:text-[0.95rem] ${links.length > 4 ? "xl:gap-1.5 xl:px-2.5" : ""} ${
                       active
                         ? "bg-white/10 text-white shadow-[inset_0_-2px_0_var(--nav-accent)]"
                         : "text-white/70 hover:bg-white/10 hover:text-white"
@@ -110,11 +116,14 @@ export default function NavBar() {
                     <span className="relative">
                       <Icon className="size-5 shrink-0" aria-hidden />
                       {l.label === "Messages" && (
-                        <UnreadBadge count={unreadMessages} className="absolute -top-2 -right-3 sm:hidden" />
+                        <UnreadBadge count={unreadMessages} className={`absolute -top-2 -right-3 ${links.length > 4 ? "xl:hidden" : "sm:hidden"}`} />
                       )}
                     </span>
-                    {l.label}
-                    {l.label === "Messages" && <UnreadBadge count={unreadMessages} className="hidden sm:grid" />}
+                    {/* Lots of tabs (landlords): icons only until there's room for words */}
+                    <span className={links.length > 4 ? "max-xl:sr-only" : ""}>{l.label}</span>
+                    {l.label === "Messages" && (
+                      <UnreadBadge count={unreadMessages} className={links.length > 4 ? "hidden xl:grid" : "hidden sm:grid"} />
+                    )}
                   </Link>
                 </li>
               );

@@ -1,42 +1,102 @@
 "use client";
 
+// Landlord workspace frame. Wide screens only: phones use the bottom tab bar.
+// The Requests home gets the same look as the tenant home (Nermin): a navy
+// greeting with one main button, then big shortcut tiles. Sections are in
+// the top bar.
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Building2, CalendarDays, ClipboardCheck, FileText, MessageCircle, Plus, UserCheck, type LucideIcon } from "lucide-react";
 import { UnreadBadge, useMessageAlerts } from "@/components/MessageAlerts";
+import { useAuth } from "@/lib/auth";
+import { useLandlordRequests } from "@/lib/useLandlordRequests";
 
-const links = [
-  { href: "/landlord/properties", label: "My properties" },
-  { href: "/landlord", label: "Requests" },
-  { href: "/landlord/contractors", label: "Trusted contractors" },
-  { href: "/landlord/messages", label: "Messages" },
-  { href: "/landlord/lease", label: "Lease" },
-  { href: "/landlord/calendar", label: "Jobs calendar" },
-];
 
 export function LandlordShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   // Red count on "Messages": how many tenants have unread messages (added by Nermin).
   const unreadTenants = useMessageAlerts()?.badge ?? 0;
+  const home = pathname === "/landlord";
+
   return (
     <div className="landlord-app space-y-7 text-fg">
-      {/* Small navy hero in the proposal C style, with a baby-blue glow (Nermin).
-          Phones skip this banner and the section menu: the bottom tab bar covers them. */}
-      {/* Messages skips the banner so the chat fits on one screen */}
-      <div className={`relative hidden overflow-hidden rounded-xl bg-navy px-6 py-7 text-white ring-1 ring-white/10 ${pathname.startsWith("/landlord/messages") ? "" : "md:block"}`}>
-        <div aria-hidden="true" className="glow-blob absolute -top-24 -right-16 size-72 bg-[#0c3b5c] opacity-90 blur-3xl" />
-        <div aria-hidden="true" className="gridlines absolute inset-0" />
-        <div className="relative">
-          <p className="font-[family-name:var(--font-heading)] text-[1.9rem] leading-tight font-semibold">Landlord workspace</p>
-          <p className="mt-1 text-lg text-white/70">Repairs, people, and appointments in one place.</p>
-        </div>
-      </div>
-      <nav aria-label="Landlord sections" className="hidden flex-wrap gap-2 md:flex">
-        {links.map((link) => {
-          const active = link.href === "/landlord" ? pathname === link.href || pathname.startsWith("/landlord/requests/") : pathname === link.href || pathname.startsWith(`${link.href}/`);
-          return <Link key={link.href} href={link.href} aria-current={active ? "page" : undefined} className={`inline-flex min-h-11 items-center gap-2 rounded-lg px-4 py-3 text-[0.95rem] font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-edge ${active ? "bg-accent text-on-accent" : "bg-surface text-muted ring-1 ring-line hover:bg-accent-soft hover:text-fg"}`}>{link.label}{link.href === "/landlord/messages" && <UnreadBadge count={unreadTenants} />}</Link>;
-        })}
-      </nav>
+      {/* Sections live in the top bar now (NavBar), like the tenant pages */}
+      {home && <HomeTop unread={unreadTenants} />}
       {children}
     </div>
+  );
+}
+
+// Wide screens: greeting + main button, then shortcut tiles (like the tenant home).
+function HomeTop({ unread }: { unread: number }) {
+  const { user } = useAuth();
+  const { requests, loading } = useLandlordRequests();
+  const firstName = user?.name.split(" ")[0] ?? "there";
+  const waiting = requests.filter((r) => r.status === "submitted" || r.status === "contractor_suggested").length;
+
+  return (
+    <div className="hidden space-y-6 md:block">
+      <section className="relative overflow-hidden rounded-xl bg-navy px-9 py-9 text-white ring-1 ring-white/10">
+        <div aria-hidden="true" className="glow-blob absolute -top-28 -right-20 size-80 bg-[#4d9fc7] opacity-50 blur-3xl" />
+        <div aria-hidden="true" className="gridlines absolute inset-0" />
+        <div className="relative space-y-6">
+          <div className="space-y-1.5">
+            <p className="font-[family-name:var(--font-heading)] text-[2.9rem] leading-tight font-semibold">Hi {firstName}</p>
+            <p className="max-w-xl text-lg text-white/75">
+              {loading
+                ? "Checking your repairs…"
+                : waiting
+                  ? `${waiting} ${waiting === 1 ? "repair needs" : "repairs need"} your decision.`
+                  : "Nothing needs your decision right now."}
+            </p>
+          </div>
+          {waiting > 0 ? (
+            <a
+              href="#requests"
+              className="inline-flex min-h-[3.6rem] items-center justify-center gap-3 rounded-lg bg-landlord px-7 text-lg font-semibold text-navy shadow-[0_10px_30px_-12px_rgba(154,216,247,.7)] transition-colors hover:bg-white"
+            >
+              <ClipboardCheck className="size-5" aria-hidden />
+              Review {waiting === 1 ? "it" : "them"} now
+            </a>
+          ) : (
+            <Link
+              href="/landlord/properties"
+              className="inline-flex min-h-[3.6rem] items-center justify-center gap-3 rounded-lg bg-landlord px-7 text-lg font-semibold text-navy shadow-[0_10px_30px_-12px_rgba(154,216,247,.7)] transition-colors hover:bg-white"
+            >
+              <Plus className="size-5" aria-hidden />
+              Add a property
+            </Link>
+          )}
+        </div>
+      </section>
+
+      <nav aria-label="Shortcuts" className="grid grid-cols-3 gap-3 lg:grid-cols-5">
+        <Tile href="/landlord/messages" icon={MessageCircle} title="Messages" badge={unread} />
+        <Tile href="/landlord/properties" icon={Building2} title="My properties" />
+        <Tile href="/landlord/calendar" icon={CalendarDays} title="Jobs calendar" />
+        <Tile href="/landlord/contractors" icon={UserCheck} title="Trusted contractors" />
+        <Tile href="/landlord/lease" icon={FileText} title="Leases" />
+      </nav>
+    </div>
+  );
+}
+
+function Tile({ href, icon: Icon, title, badge = 0 }: { href: string; icon: LucideIcon; title: string; badge?: number }) {
+  return (
+    <Link
+      href={href}
+      className="pressable relative flex min-h-28 flex-col items-start justify-between gap-3 rounded-xl border border-line bg-surface p-4 hover:border-accent-edge hover:bg-accent-soft/40"
+    >
+      <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent-ink">
+        <Icon className="size-5" aria-hidden />
+      </span>
+      <span className="text-lg leading-tight font-semibold">{title}</span>
+      {badge > 0 && (
+        <span className="absolute top-2 right-2">
+          <UnreadBadge count={badge} />
+        </span>
+      )}
+    </Link>
   );
 }
