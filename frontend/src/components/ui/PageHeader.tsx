@@ -16,7 +16,7 @@ export function PageHeader({
   action?: ReactNode;
 }) {
   return (
-    <header className="mb-8 space-y-3">
+    <header className="mb-6 space-y-2 sm:mb-8 sm:space-y-3">
       {back && (
         <Link
           href={back.href}
@@ -28,7 +28,7 @@ export function PageHeader({
       )}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="space-y-2">
-          <h1 className="text-[2.1rem] leading-tight font-semibold sm:text-[2.6rem]">{title}</h1>
+          <h1 className="text-[1.75rem] leading-tight font-semibold sm:text-[2.6rem]">{title}</h1>
           {intro && <p className="max-w-[60ch] text-lg text-muted">{intro}</p>}
         </div>
         {action}

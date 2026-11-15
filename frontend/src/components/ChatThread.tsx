@@ -8,9 +8,8 @@
 // Realtime later if you like; the API stays the same.)
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { SendHorizontal } from "lucide-react";
-import { Button } from "@/components/ui/Button";
-import { inputClass } from "@/components/ui/Field";
+import Link from "next/link";
+import { ArrowUp, Wrench } from "lucide-react";
 import type { ChatMessage } from "@/lib/types";
 import { useMessageAlerts } from "@/components/MessageAlerts";
 import { authFetch } from "@/lib/authFetch";
@@ -20,15 +19,57 @@ interface Props {
   me: { id: string; role: "tenant" | "landlord"; name: string };
   timeZone?: string; // the property's time zone (Brenen), e.g. "America/New_York"
   otherName?: string; // shown in the empty state, e.g. "your landlord"
+  quickReplies?: string[]; // tap to fill the message box (Nermin)
+  requestsHref?: string; // where "New repair request" cards link to
 }
 
-export function ChatThread({ tenantId, me, otherName = "them", timeZone }: Props) {
+const REQUEST_PREFIX = "New repair request:";
+
+// 📱 Phones: the conversation fills the space between the top bar and the
+// bottom tabs. The contact header and the message box stay put; only the
+// messages scroll. Wide screens keep the normal page flow.
+export const PHONE_CHAT_PANEL =
+  "max-md:fixed max-md:inset-x-0 max-md:top-[calc(4rem+1px)] max-md:bottom-[calc(3.5rem+1px+max(0.5rem,env(safe-area-inset-bottom)))] max-md:z-30 max-md:flex max-md:flex-col max-md:gap-3 max-md:bg-bg max-md:px-4 max-md:pt-3 max-md:pb-2";
+
+export function ChatThread({ tenantId, me, otherName = "them", timeZone, quickReplies = [], requestsHref }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
+  const box = useRef<HTMLTextAreaElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+
+  // Wider screens: size the chat to end at the bottom of the window, so the
+  // page itself doesn't scroll; only the messages inside do.
+  useEffect(() => {
+    const el = panel.current;
+    if (!el) return;
+    const wide = window.matchMedia("(width >= 48rem)");
+    const fit = () => {
+      if (!wide.matches) {
+        el.style.height = "";
+        return;
+      }
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      el.style.height = `${Math.max(320, window.innerHeight - top - 46)}px`;
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    wide.addEventListener("change", fit);
+    return () => {
+      window.removeEventListener("resize", fit);
+      wide.removeEventListener("change", fit);
+    };
+  }, []);
+
+  // Grow the message box with its text (up to max-h), like a phone's.
+  const grow = (el: HTMLTextAreaElement | null) => {
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  };
   const count = useRef(0);
   // Messages that were already there when the screen opened don't animate;
   // only new ones slide in.
@@ -79,7 +120,9 @@ export function ChatThread({ tenantId, me, otherName = "them", timeZone }: Props
   // Scroll to the newest message when one arrives.
   useEffect(() => {
     if (messages.length !== count.current) {
-      bottom.current?.scrollIntoView({ block: "end", behavior: count.current === 0 ? "instant" : "smooth" });
+      // Scroll only the message list, never the whole page.
+      const list = bottom.current?.parentElement;
+      list?.scrollTo({ top: list.scrollHeight, behavior: count.current === 0 ? "instant" : "smooth" });
       count.current = messages.length;
     }
   }, [messages]);
@@ -100,6 +143,7 @@ export function ChatThread({ tenantId, me, otherName = "them", timeZone }: Props
       const saved: ChatMessage = await res.json();
       setMessages((m) => [...m, saved]);
       setDraft("");
+      requestAnimationFrame(() => grow(box.current)); // shrink the box back to one line
     } catch {
       setError("Your message didn't send. Check your connection and try again.");
     } finally {
@@ -108,10 +152,10 @@ export function ChatThread({ tenantId, me, otherName = "them", timeZone }: Props
   }
 
   return (
-    <div className="flex min-h-[60vh] flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-card">
-      <div className="flex-1 space-y-4 overflow-y-auto p-5 sm:p-6" aria-live="polite">
+    <div ref={panel} className="flex min-h-0 min-w-0 flex-1 flex-col overflow-clip rounded-xl border border-line bg-surface shadow-card md:flex-none">
+      <div className="flex-1 space-y-3 overflow-y-auto p-3 sm:space-y-4 sm:p-6" aria-live="polite">
         {loaded && messages.length === 0 && (
-          <p className="py-10 text-center text-lg text-muted">No messages yet. Say hello to {otherName}.</p>
+          <p className="py-10 text-center text-base text-muted sm:text-lg">No messages yet. Say hello to {otherName}.</p>
         )}
         {loaded === false && (
           <div className="space-y-4" aria-hidden>
@@ -142,13 +186,17 @@ export function ChatThread({ tenantId, me, otherName = "them", timeZone }: Props
                 }`}
               >
                 {showName && <span className="mb-1 px-1 text-base font-semibold text-muted">{mine ? "You" : m.senderName}</span>}
-                <p
-                  className={`max-w-[88%] rounded-xl px-4 py-3 text-lg leading-snug whitespace-pre-line sm:max-w-[72%] ${
-                    mine ? "rounded-br-md bg-accent text-on-accent" : "rounded-bl-md bg-sunken text-fg"
-                  }`}
-                >
-                  {m.body}
-                </p>
+                {m.body.startsWith(REQUEST_PREFIX) ? (
+                  <RequestCard body={m.body} href={requestsHref} />
+                ) : (
+                  <p
+                    className={`max-w-[85%] rounded-xl px-3.5 py-2.5 text-base leading-snug sm:px-4 sm:py-3 sm:text-lg whitespace-pre-line sm:max-w-[72%] ${
+                      mine ? "rounded-br-md bg-accent text-on-accent" : "rounded-bl-md bg-sunken text-fg"
+                    }`}
+                  >
+                    {m.body}
+                  </p>
+                )}
                 <span className="mt-1 px-1 text-base text-muted">
                   <time dateTime={m.createdAt}>
                     {new Date(m.createdAt).toLocaleTimeString(timeZone ? "en-US" : undefined, {
@@ -166,18 +214,48 @@ export function ChatThread({ tenantId, me, otherName = "them", timeZone }: Props
         <div ref={bottom} />
       </div>
 
-      <form onSubmit={send} className="border-t border-line bg-bg/60 p-4">
+      {/* The message box sits at the bottom of the panel (on phones: right above the tab bar). */}
+      <form
+        onSubmit={send}
+        className="shrink-0 border-t border-line bg-bg p-3 sm:p-4 md:bg-bg/60"
+      >
         {error && (
           <p role="alert" className="mb-3 rounded-lg bg-danger-soft px-4 py-3 text-base font-medium text-danger-ink">
             {error}
           </p>
         )}
-        <div className="flex items-end gap-3">
+        {quickReplies.length > 0 && (
+          <div className="-mx-1 mb-1.5 flex gap-2 overflow-x-auto px-1 py-1 [scrollbar-width:none] sm:mb-2.5">
+            {quickReplies.map((q) => (
+              <button
+                key={q}
+                type="button"
+                onClick={() => {
+                  setDraft(q);
+                  requestAnimationFrame(() => {
+                    grow(box.current);
+                    box.current?.focus();
+                  });
+                }}
+                className="min-h-10 shrink-0 cursor-pointer rounded-full bg-surface px-3.5 text-[0.9rem] font-medium sm:min-h-11 sm:px-4 sm:text-base ring-1 ring-line-strong transition-colors hover:bg-accent-soft"
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        )}
+        {/* iMessage-style: a rounded box that grows as you type, with a round
+            arrow button inside it that turns green once there's something to send. */}
+        <div className="flex items-end gap-2 rounded-[1.6rem] border border-line-strong bg-surface py-1.5 pr-1.5 pl-4 transition-colors focus-within:border-accent-edge focus-within:ring-3 focus-within:ring-accent-edge/25">
           <label className="min-w-0 flex-1">
-            <span className="mb-1.5 block text-base font-semibold">Your message</span>
+            <span className="sr-only">Message</span>
             <textarea
+              ref={box}
               value={draft}
-              onChange={(e) => setDraft(e.target.value)}
+              onChange={(e) => {
+                setDraft(e.target.value);
+                grow(e.currentTarget);
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -186,15 +264,19 @@ export function ChatThread({ tenantId, me, otherName = "them", timeZone }: Props
               }}
               rows={1}
               maxLength={2000}
-              placeholder={`Write to ${otherName}…`}
-              className={`${inputClass} max-h-48 min-h-14 resize-none`}
+              placeholder={`Message ${otherName}`}
+              className="block max-h-40 min-h-11 w-full resize-none bg-transparent py-2 text-base leading-snug sm:text-lg text-fg placeholder:text-muted focus:outline-none"
             />
           </label>
-          <Button type="submit" disabled={sending || !draft.trim()} icon={<SendHorizontal aria-hidden />}>
-            {sending ? "Sending…" : "Send"}
-          </Button>
+          <button
+            type="submit"
+            disabled={sending || !draft.trim()}
+            aria-label={sending ? "Sending" : "Send"}
+            className="grid size-11 shrink-0 cursor-pointer place-items-center rounded-full bg-accent text-on-accent transition-[background-color,transform,opacity] duration-200 hover:bg-accent-hover active:scale-95 disabled:cursor-default disabled:bg-line-strong disabled:text-surface disabled:opacity-70"
+          >
+            <ArrowUp className="size-6" strokeWidth={2.6} aria-hidden />
+          </button>
         </div>
-        <p className="mt-2 hidden text-base text-muted sm:block">Press Enter to send. Shift + Enter starts a new line.</p>
       </form>
     </div>
   );
@@ -211,4 +293,28 @@ function dayLabel(iso: string) {
   if (d.toDateString() === today.toDateString()) return "Today";
   if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
   return d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+}
+
+// A repair request posted into the chat, shown as a card instead of a bubble.
+function RequestCard({ body, href }: { body: string; href?: string }) {
+  const [first, ...rest] = body.slice(REQUEST_PREFIX.length).trim().split("\n");
+  const inner = (
+    <>
+      <span className="flex items-center gap-2 text-base font-semibold text-accent-ink">
+        <Wrench className="size-4" aria-hidden />
+        New repair request
+      </span>
+      <span className="mt-1 block text-base font-semibold sm:text-lg">{first}</span>
+      {rest.length > 0 && <span className="mt-0.5 line-clamp-2 block text-base text-muted">{rest.join(" ")}</span>}
+      {href && <span className="mt-2 block text-base font-semibold text-accent-ink">See progress →</span>}
+    </>
+  );
+  const cls = "block w-full max-w-[88%] rounded-xl border border-line bg-surface p-4 text-left sm:max-w-[72%]";
+  return href ? (
+    <Link href={href} className={`${cls} transition-colors hover:border-accent-edge`}>
+      {inner}
+    </Link>
+  ) : (
+    <div className={cls}>{inner}</div>
+  );
 }

@@ -1,7 +1,13 @@
 // Adapted from the supplied wrench-house-logo.svg. The shared role tokens
 // color the same mark for tenant, landlord, and neutral pages.
+// Baby blue is the main Tenly logo; tenants see it in their green (Nermin).
 // Wrench thickened and enlarged so it reads at small sizes (Nermin).
-export function TenlyLogo() {
+// Same design in two colors: light tile, dark wrench, mid-tone second wrench.
+const BLUE = { tile: "#9ad8f7", shadow: "#3f8fc0", wrench: "#0c3b5c", window: "#0c3b5c" };
+const GREEN = { tile: "#5bd38f", shadow: "#249a5c", wrench: "#0d3b24", window: "#0d3b24" };
+
+export function TenlyLogo({ role }: { role?: string }) {
+  const c = role === "tenant" ? GREEN : BLUE;
   return (
     <svg
       className="size-10 shrink-0 transition-transform duration-500 ease-(--ease-out) group-hover/logo:-rotate-12"
@@ -24,13 +30,13 @@ export function TenlyLogo() {
           <circle cx="0" cy="430" r="150" />
         </g>
       </defs>
-      <rect x="-330" y="-330" width="660" height="660" rx="140" fill="var(--accent)" />
-      <g transform="translate(46,-24) scale(1.02) rotate(45) translate(0,-275)" fill="var(--accent-ink)">
+      <rect x="-330" y="-330" width="660" height="660" rx="140" fill={c.tile} />
+      <g transform="translate(37,-31) scale(1.02) rotate(45) translate(0,-275)" fill={c.shadow}>
         <use href="#tenly-logo-wrench" />
       </g>
       <g transform="translate(28,-40) scale(1.02) rotate(45) translate(0,-275)">
-        <g fill="var(--on-accent)"><use href="#tenly-logo-wrench" /></g>
-        <rect x="-24" y="458" width="48" height="48" rx="6" fill="var(--accent-ink)" transform="rotate(-45 0 430)" />
+        <g fill={c.wrench}><use href="#tenly-logo-wrench" /></g>
+        <rect x="-24" y="458" width="48" height="48" rx="6" fill={c.window} transform="rotate(-45 0 430)" />
       </g>
     </svg>
   );

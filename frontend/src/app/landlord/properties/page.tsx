@@ -83,12 +83,11 @@ export default function PropertiesPage() {
     {loading && <p role="status" className="rounded-xl border border-line bg-surface p-6">Loading properties…</p>}
     {error && <div className="space-y-3"><ErrorNote>{error}</ErrorNote><Button variant="secondary" onClick={reload}>Try again</Button></div>}
     {!loading && !error && properties.length === 0 && <div className="rounded-xl border border-dashed border-line-strong bg-surface p-7"><h2 className="text-xl font-semibold">Your homes will appear here</h2><p className="mt-2 text-muted">Add your first property to keep its residents and repairs together.</p></div>}
-    {!loading && !error && states.map((state) => <section key={state} aria-labelledby={`state-${state}`} className="space-y-4">
-      <h2 id={`state-${state}`} className="text-xl font-semibold">{STATE_NAMES[state] ?? state} <span className="font-normal text-muted">· {zoneLabel(state)}</span></h2>
-      <ul className="grid gap-4 lg:grid-cols-2">{properties.filter((property) => property.state === state).sort((a, b) => a.city.localeCompare(b.city) || a.address.localeCompare(b.address)).map((property) => {
+    {/* All homes in one grid so they sit side by side; each card names its state and time zone. */}
+    {!loading && !error && properties.length > 0 && <ul aria-label="Your properties" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{states.flatMap((state) => properties.filter((property) => property.state === state).sort((a, b) => a.city.localeCompare(b.city) || a.address.localeCompare(b.address))).map((property) => {
         const unread = alerts?.threads.filter((thread) => property.residents.some((resident) => resident.tenantId === thread.tenantId)).reduce((sum, thread) => sum + thread.count, 0) ?? 0;
-        return <li key={property.id}><article className="h-full space-y-5 rounded-xl border border-line bg-surface p-5 shadow-card sm:p-6">
-          <div className="min-w-0 flex-1 space-y-3"><div><h3 className="break-words text-2xl font-semibold text-landlord-ink"><Link href={`/landlord/properties/${encodeURIComponent(property.id)}`} className="rounded underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-edge">{property.address}</Link></h3><p className="mt-1 text-muted">{property.city}, {property.state} {property.zip}</p></div>
+        return <li key={property.id}><article className="flex h-full flex-col gap-4 rounded-xl border border-line bg-surface p-4 shadow-card sm:p-5">
+          <div className="min-w-0 flex-1 space-y-2.5"><div><p className="text-sm font-semibold text-muted">{STATE_NAMES[property.state] ?? property.state} · {zoneLabel(property.state)}</p><h3 className="break-words text-xl font-semibold text-landlord-ink"><Link href={`/landlord/properties/${encodeURIComponent(property.id)}`} className="rounded underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-edge">{property.address}</Link></h3><p className="mt-1 text-muted">{property.city}, {property.state} {property.zip}</p></div>
             <p className="text-base text-landlord-ink"><PropertyLocalTime state={property.state} /></p>
             <div><p className="font-semibold">{property.residents.length} {property.residents.length === 1 ? "resident" : "residents"}</p>{property.residents.length ? <ul className="mt-1 space-y-1">{property.residents.map((resident) => <li key={resident.tenantId} className="flex flex-wrap justify-between gap-x-3 text-muted"><span className="break-words">{resident.name}</span><span>{resident.unit || "Unit not set"}</span></li>)}</ul> : <p className="text-muted">No one has joined yet. Send them the link or code below.</p>}</div>
             <div className="flex flex-wrap gap-2"><span className="rounded-lg bg-landlord-soft px-3 py-1 text-sm font-semibold text-landlord-ink">{property.openRequestCount} open {property.openRequestCount === 1 ? "repair" : "repairs"}</span>{unread > 0 && <span className="rounded-lg bg-warn-soft px-3 py-1 text-sm font-semibold text-warn-ink">{unread} unread {unread === 1 ? "message" : "messages"}</span>}</div>
@@ -96,7 +95,6 @@ export default function PropertiesPage() {
           <PropertyInvite property={property} />
           <Link href={`/landlord/properties/${encodeURIComponent(property.id)}`} aria-label={`Open ${property.address}`} className="inline-flex min-h-11 items-center gap-2 rounded-lg font-semibold text-landlord-ink underline underline-offset-4 hover:bg-landlord-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-edge">Open property <ArrowRight aria-hidden className="size-5" /></Link>
         </article></li>;
-      })}</ul>
-    </section>)}
+      })}</ul>}
   </div>;
 }

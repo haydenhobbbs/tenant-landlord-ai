@@ -7,7 +7,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { CalendarClock, CheckCircle2, MessageCircle, Phone, Star } from "lucide-react";
-import { RequestTracker } from "@/components/RequestTracker";
+import { RequestTracker, currentStep } from "@/components/RequestTracker";
 import { StatusBadge, UrgencyBadge } from "@/components/StatusBadge";
 import { ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -32,6 +32,8 @@ function RequestDetail() {
   // Next.js keeps this page's state between visits; never show a different repair's data.
   const request = loaded?.id === id ? loaded : null;
   const [missing, setMissing] = useState(false);
+  // Phones: "What you sent" and the photos share one spot, switched by tabs.
+  const [tab, setTab] = useState<"sent" | "photos">("sent");
 
   // Refresh every 5s so the tenant sees "Booked" appear without reloading.
   useEffect(() => {
@@ -74,6 +76,8 @@ function RequestDetail() {
   const declined = request.status === "declined";
   const summary = statusSummary(request, when);
   const pro = request.selected?.contractor;
+  const stepsDone = declined ? 0 : Math.min(currentStep(request.status), 5);
+  const photos = request.photos ?? [];
 
   return (
     <div className="stagger mx-auto max-w-6xl space-y-8">
@@ -88,12 +92,12 @@ function RequestDetail() {
 
       {/* Two columns on wider screens so less scrolling: status + who's coming on
           the left, progress + what you sent on the right. Stacked on phones. */}
-      <div className="grid items-start gap-8 lg:grid-cols-[1.1fr_1fr]">
-      <div className="space-y-8">
+      <div className="grid items-start gap-5 sm:gap-8 lg:grid-cols-[1.1fr_1fr]">
+      <div className="space-y-5 sm:space-y-8">
       {/* Where things stand, in one sentence */}
       <section
         aria-labelledby="now"
-        className={`relative overflow-hidden rounded-xl px-6 py-7 ring-1 sm:px-8 ${
+        className={`relative overflow-hidden rounded-xl px-4 py-5 ring-1 sm:px-8 sm:py-7 ${
           declined ? "bg-danger-soft ring-danger/30" : "bg-navy text-white ring-white/10"
         }`}
       >
@@ -104,11 +108,23 @@ function RequestDetail() {
           </>
         )}
         <div className="relative space-y-2">
-          <p className={`text-lg font-medium ${declined ? "text-danger-ink" : "text-tenant-bright"}`}>Right now</p>
-          <h2 id="now" className="text-[1.9rem] leading-tight sm:text-[2.2rem]">
+          <p className={`text-base font-medium sm:text-lg ${declined ? "text-danger-ink" : "text-tenant-bright"}`}>Right now</p>
+          <h2 id="now" className="text-[1.5rem] leading-tight sm:text-[2.2rem]">
             {summary.headline}
           </h2>
-          <p className={`max-w-xl text-lg ${declined ? "text-fg" : "text-white/75"}`}>{summary.next}</p>
+          <p className={`max-w-xl text-base sm:text-lg ${declined ? "text-fg" : "text-white/75"}`}>{summary.next}</p>
+          {/* Phones and tablets: progress across the panel instead of a tall list */}
+          {!declined && (
+            <ol className="!mt-5 grid grid-cols-5 gap-1.5 text-center text-[0.8rem] text-white/70 lg:hidden [&>li]:min-w-0 [&>li]:truncate" aria-label="Progress">
+              {["Sent", "Quotes", "Approve", "Booked", "Fixed"].map((label, i) => (
+                <li key={label} className={i === stepsDone ? "font-semibold text-white" : ""}>
+                  <span className={`mb-1.5 block h-1.5 rounded-full ${i < stepsDone ? "bg-tenant-bright" : i === stepsDone ? "bg-white/60" : "bg-white/15"}`} />
+                  {label}
+                  <span className="sr-only">{i < stepsDone ? " (done)" : i === stepsDone ? " (now)" : ""}</span>
+                </li>
+              ))}
+            </ol>
+          )}
         </div>
       </section>
 
@@ -119,7 +135,7 @@ function RequestDetail() {
             <h2 id="pro" className="font-[family-name:var(--font-body)] text-lg font-medium tracking-normal text-contractor-ink">
               Your repair person
             </h2>
-            <p className="font-[family-name:var(--font-heading)] text-[1.8rem] leading-tight font-semibold">{pro.name}</p>
+            <p className="font-[family-name:var(--font-heading)] text-[1.4rem] leading-tight font-semibold sm:text-[1.8rem]">{pro.name}</p>
             {pro.rating && (
               <p className="mt-1 inline-flex items-center gap-1.5 text-lg text-muted">
                 <Star className="size-5 fill-current text-contractor-ink" aria-hidden />
@@ -128,25 +144,27 @@ function RequestDetail() {
             )}
           </div>
           {when && (
-            <p className="flex items-center gap-3 rounded-lg bg-surface px-4 py-3.5 text-xl">
+            <p className="flex items-center gap-3 rounded-lg bg-surface px-3.5 py-3 text-lg sm:px-4 sm:py-3.5 sm:text-xl">
               <CalendarClock className="size-6 shrink-0 text-contractor-ink" aria-hidden />
               <span>
                 Coming <strong>{longDateTime(when)}</strong>
               </span>
             </p>
           )}
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-3">
             {pro.phone && (
               <a
                 href={`tel:${pro.phone}`}
-                className="inline-flex min-h-[3.6rem] items-center justify-center gap-2.5 rounded-lg bg-contractor px-5 text-lg font-semibold text-white transition-colors hover:bg-contractor-hover dark:text-navy"
+                className="inline-flex min-h-12 items-center justify-center gap-2.5 rounded-lg bg-contractor px-5 text-base font-semibold text-white sm:min-h-[3.6rem] sm:text-lg transition-colors hover:bg-contractor-hover dark:text-navy"
               >
                 <Phone className="size-5" aria-hidden />
-                <span className="text-center leading-tight">Call {pro.name}</span>
+                <span className="text-center leading-tight sm:hidden">Call</span>
+                <span className="hidden text-center leading-tight sm:inline">Call {pro.name}</span>
               </a>
             )}
             <ButtonLink href="/tenant/messages" variant="secondary" icon={<MessageCircle aria-hidden />}>
-              Message your landlord
+              <span className="sm:hidden">Message</span>
+              <span className="hidden sm:inline">Message your landlord</span>
             </ButtonLink>
           </div>
         </Card>
@@ -155,7 +173,7 @@ function RequestDetail() {
       {/* Waiting: the landlord is choosing between the options we found */}
       {request.status === "contractor_suggested" && request.suggestions.length > 0 && (
         <Card tone="contractor" as="section" aria-labelledby="options" className="space-y-4">
-          <h2 id="options" className="text-[1.5rem] leading-tight">
+          <h2 id="options" className="text-[1.3rem] leading-tight sm:text-[1.5rem]">
             {request.suggestions.length === 1 ? "We found a repair person" : `We found ${request.suggestions.length} repair people`}
           </h2>
           <ul className="divide-y divide-contractor/15 rounded-lg bg-surface">
@@ -182,8 +200,8 @@ function RequestDetail() {
       )}
       </div>
 
-      <div className="space-y-8">
-      <section aria-labelledby="progress" className="rounded-xl border border-line bg-surface p-6 sm:p-8">
+      <div className="space-y-5 sm:space-y-8">
+      <section aria-labelledby="progress" className="hidden rounded-xl border border-line bg-surface p-6 sm:p-8 lg:block">
         <h2 id="progress" className="mb-6 text-[1.5rem] leading-tight">
           Step by step
         </h2>
@@ -191,17 +209,37 @@ function RequestDetail() {
       </section>
 
       <section aria-labelledby="sent" className="space-y-4">
-        <h2 id="sent" className="text-[1.5rem] leading-tight">
+        <h2 id="sent" className="text-[1.3rem] leading-tight sm:text-[1.5rem]">
           What you sent
         </h2>
         <div className="flex flex-wrap gap-2">
           <StatusBadge status={request.status} />
           <UrgencyBadge urgency={request.urgency} />
         </div>
-        <p className="max-w-[65ch] text-lg whitespace-pre-line">{request.description}</p>
-        {request.photos && request.photos.length > 0 && (
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {request.photos.map((src, i) => (
+        {photos.length > 0 && (
+          <div role="tablist" aria-label="What you sent" className="grid grid-cols-2 rounded-xl bg-sunken p-1 lg:hidden">
+            {(["sent", "photos"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                role="tab"
+                aria-selected={tab === t}
+                onClick={() => setTab(t)}
+                className={`min-h-12 cursor-pointer rounded-lg text-lg font-semibold transition-colors ${
+                  tab === t ? "bg-surface text-fg shadow-card" : "text-muted"
+                }`}
+              >
+                {t === "sent" ? "Description" : `Photos (${photos.length})`}
+              </button>
+            ))}
+          </div>
+        )}
+        <p className={`max-w-[65ch] text-lg whitespace-pre-line ${tab === "photos" ? "hidden lg:block" : ""}`}>
+          {request.description}
+        </p>
+        {photos.length > 0 && (
+          <ul className={`grid grid-cols-2 gap-3 sm:grid-cols-3 ${tab === "sent" ? "hidden lg:grid" : ""}`}>
+            {photos.map((src, i) => (
               <li key={i}>
                 <a href={src} target="_blank" rel="noreferrer" className="block" aria-label={`Open photo ${i + 1} full size`}>
                   {/* eslint-disable-next-line @next/next/no-img-element -- user photos (storage or data: URLs) */}
