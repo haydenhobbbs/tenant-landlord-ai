@@ -22,7 +22,7 @@ const URGENCY_STYLES: Record<Urgency, { label: string; className: string }> = {
   emergency: { label: "Emergency", className: "bg-danger text-white dark:text-[#1a0806]" },
 };
 
-const pill = "inline-flex items-center rounded-full px-3 py-1 text-base font-semibold whitespace-nowrap";
+const pill = "inline-flex items-center rounded-full px-2.5 py-0.5 text-sm font-semibold whitespace-nowrap sm:px-3 sm:py-1 sm:text-base";
 
 export function StatusBadge({ status }: { status: RequestStatus | string }) {
   const s = STATUS_STYLES[status] ?? { label: status, className: "bg-sunken text-fg" };

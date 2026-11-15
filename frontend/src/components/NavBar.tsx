@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, FileText, Home, MessageCircle, Settings, type LucideIcon } from "lucide-react";
+import { Bell, Building2, CalendarDays, FileText, Home, LayoutGrid, MessageCircle, Settings, Wrench, type LucideIcon } from "lucide-react";
+import { BottomTabBar } from "@/components/BottomTabBar";
 import { TenlyLogo } from "@/components/TenlyLogo";
 import { homeFor, useAuth, type Role } from "@/lib/auth";
 import { useUnreadCount } from "@/lib/useNotifications";
 import { UnreadBadge, useMessageAlerts } from "@/components/MessageAlerts";
 
-type NavLink = { href: string; label: string; icon: LucideIcon; exact?: boolean };
+type NavLink = { href: string; label: string; icon: LucideIcon; exact?: boolean; also?: string[] };
 
 // Each role's tabs. "Home" is always that role's main screen.
 const LINKS: Record<Role, NavLink[]> = {
@@ -21,6 +22,24 @@ const LINKS: Record<Role, NavLink[]> = {
   landlord: [
     { href: "/landlord", label: "Home", icon: Home, exact: true },
     { href: "/landlord/settings", label: "Settings", icon: Settings },
+  ],
+};
+
+// Phone bottom tabs (Nermin). Landlords also get Properties + Messages here,
+// since the workspace menu scrolls off-screen on a phone.
+const PHONE_LINKS: Record<Role, NavLink[]> = {
+  tenant: LINKS.tenant,
+  landlord: [
+    { href: "/landlord", label: "Requests", icon: Wrench, exact: true },
+    { href: "/landlord/properties", label: "Homes", icon: Building2 },
+    { href: "/landlord/messages", label: "Messages", icon: MessageCircle },
+    { href: "/landlord/calendar", label: "Calendar", icon: CalendarDays },
+    {
+      href: "/landlord/more",
+      label: "More",
+      icon: LayoutGrid,
+      also: ["/landlord/contractors", "/landlord/lease", "/landlord/settings", "/landlord/notifications"],
+    },
   ],
 };
 
@@ -42,6 +61,7 @@ export default function NavBar() {
   const roleColor = user?.role === "landlord" ? "var(--landlord)" : "var(--tenant-bright)";
 
   return (
+    <>
     <header
       className="sticky top-0 z-40 border-b border-navy-line bg-navy/95 text-white backdrop-blur"
       data-role={user?.role}
@@ -64,16 +84,14 @@ export default function NavBar() {
               } as React.CSSProperties
             }
           >
-            <TenlyLogo />
+            <TenlyLogo role={user?.role} />
           </span>
           Tenly
         </Link>
 
         {links.length > 0 && (
           <ul
-            className={`order-last grid w-full gap-1 md:order-none md:flex md:w-auto ${
-              links.length === 4 ? "grid-cols-4" : "grid-cols-2"
-            }`}
+            className="hidden gap-1 md:flex"
           >
             {links.map((l) => {
               const active = isActive(l);
@@ -142,5 +160,8 @@ export default function NavBar() {
         )}
       </nav>
     </header>
+    {/* Outside the header: its backdrop blur would trap a fixed-position child. */}
+    {user && <BottomTabBar links={PHONE_LINKS[user.role]} unreadMessages={unreadMessages} pathname={pathname} role={user.role} />}
+    </>
   );
 }

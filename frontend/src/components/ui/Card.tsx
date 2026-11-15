@@ -20,7 +20,7 @@ export function Card({
   as: Tag = "div",
   ...rest
 }: { tone?: Tone; as?: "div" | "section" | "article" | "li" } & ComponentProps<"div">) {
-  return <Tag className={`rounded-xl p-6 ${tones[tone]} ${className}`} {...(rest as object)} />;
+  return <Tag className={`rounded-xl p-4 sm:p-6 ${tones[tone]} ${className}`} {...(rest as object)} />;
 }
 
 export function Divider({ className = "" }: { className?: string }) {

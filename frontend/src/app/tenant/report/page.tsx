@@ -8,7 +8,23 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Camera, Check, ImagePlus, Pencil, Send, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Bug,
+  Camera,
+  Check,
+  Droplets,
+  Flame,
+  ImagePlus,
+  Pencil,
+  Refrigerator,
+  Send,
+  ShowerHead,
+  X,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
 import { SendingSteps } from "@/components/SendingSteps";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
@@ -20,15 +36,14 @@ import { authFetch } from "@/lib/authFetch";
 
 const STEPS = ["What's wrong", "Photo", "How soon", "Check and send"] as const;
 
-const COMMON = [
-  "Leaking pipe or faucet",
-  "Toilet won't stop running",
-  "No hot water",
-  "Heat isn't working",
-  "AC isn't working",
-  "Power outlet not working",
-  "Appliance broken",
-  "Bugs or mice",
+// Big picture tiles, two across on phones. Tapping one fills in the title.
+const COMMON: { title: string; label: string; icon: LucideIcon }[] = [
+  { title: "Leak or water problem", label: "Leak or water", icon: Droplets },
+  { title: "Heat isn't working", label: "No heat", icon: Flame },
+  { title: "No hot water", label: "No hot water", icon: ShowerHead },
+  { title: "Power or lights not working", label: "Power or lights", icon: Zap },
+  { title: "Appliance broken", label: "Appliance", icon: Refrigerator },
+  { title: "Bugs or mice", label: "Bugs or mice", icon: Bug },
 ];
 
 const URGENCY: { value: Urgency; label: string; hint: string }[] = [
@@ -116,8 +131,11 @@ export default function ReportPage() {
 
   function nextFromProblem() {
     const errs: typeof fieldError = {};
-    if (!title.trim()) errs.title = "Please tell us in a few words what's wrong, or tap one of the examples.";
-    if (description.trim().length < 10) errs.description = "Please add a little more detail, like where it is and when it started.";
+    const picked = COMMON.some((c) => c.title === title);
+    if (!title.trim()) errs.title = "Please tap the closest problem, or describe it in a few words.";
+    // Details are optional when a tile was picked; required (briefly) for a typed-in problem.
+    if (!picked && description.trim().length < 10)
+      errs.description = "Please add a little more detail, like where it is and when it started.";
     setFieldError(errs);
     if (!errs.title && !errs.description) goTo(1);
   }
@@ -149,7 +167,7 @@ export default function ReportPage() {
       tenantName: user.name,
       unit: user.unit || "Unit not set",
       title: title.trim(),
-      description: description.trim(),
+      description: description.trim() || title.trim(),
       property: lease
         ? { address: lease.propertyAddress, city: lease.city, state: lease.state, zip: lease.zip }
         : undefined,
@@ -188,7 +206,7 @@ export default function ReportPage() {
   }
 
   const urgencyInfo = URGENCY.find((u) => u.value === urgency)!;
-  const questionClass = "text-[2rem] leading-tight font-semibold outline-none sm:text-[2.4rem]";
+  const questionClass = "text-[1.6rem] leading-tight font-semibold outline-none sm:text-[2.4rem]";
 
   return (
     <div className="mx-auto max-w-2xl pb-28 sm:pb-0">
@@ -224,31 +242,36 @@ export default function ReportPage() {
               What’s wrong?
             </h1>
             <div className="space-y-3">
-              <p className="text-lg text-muted">Tap one to fill it in, or type your own below.</p>
-              <div className="flex flex-wrap gap-2.5">
-                {COMMON.map((c) => {
-                  const on = title === c;
+              <p className="text-lg text-muted">Tap the closest one.</p>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {COMMON.map(({ title: t, label, icon: Icon }) => {
+                  const on = title === t;
                   return (
                     <button
-                      key={c}
+                      key={t}
                       type="button"
                       onClick={() => {
-                        setTitle(c);
-                        setFieldError((e) => ({ ...e, title: undefined }));
+                        setTitle(t);
+                        setFieldError({});
                       }}
                       aria-pressed={on}
-                      className={`inline-flex min-h-12 cursor-pointer items-center gap-2 rounded-lg px-4 text-lg font-medium transition-colors ${
-                        on ? "bg-accent text-on-accent" : "bg-surface ring-1 ring-line-strong hover:bg-accent-soft"
+                      className={`pressable relative flex min-h-24 cursor-pointer flex-col items-start justify-between gap-3 rounded-xl p-4 text-left ${
+                        on ? "bg-accent text-on-accent ring-2 ring-accent" : "bg-surface ring-1 ring-line-strong hover:bg-accent-soft"
                       }`}
                     >
-                      {on && <Check className="size-5" strokeWidth={3} aria-hidden />}
-                      {c}
+                      <Icon className="size-7" aria-hidden />
+                      <span className="text-lg leading-tight font-semibold">{label}</span>
+                      {on && (
+                        <span className="absolute top-3 right-3 grid size-6 animate-pop place-items-center rounded-full bg-on-accent text-accent">
+                          <Check className="size-4" strokeWidth={3} aria-hidden />
+                        </span>
+                      )}
                     </button>
                   );
                 })}
               </div>
             </div>
-            <Field label="In a few words" error={fieldError.title}>
+            <Field label="Or describe it in a few words" error={fieldError.title}>
               <Input
                 value={title}
                 onChange={(e) => {
@@ -261,7 +284,7 @@ export default function ReportPage() {
               />
             </Field>
             <Field
-              label="Tell us more"
+              label={COMMON.some((c) => c.title === title) ? "Anything else we should know? (optional)" : "Tell us more"}
               hint="Where is it? When did it start? Is it getting worse?"
               error={fieldError.description}
             >
@@ -272,7 +295,7 @@ export default function ReportPage() {
                   setFieldError((er) => ({ ...er, description: undefined }));
                 }}
                 maxLength={2000}
-                className="min-h-44"
+                className="min-h-32"
                 aria-invalid={!!fieldError.description}
               />
             </Field>
@@ -316,7 +339,7 @@ export default function ReportPage() {
                 type="button"
                 onClick={() => fileInput.current?.click()}
                 disabled={photoBusy}
-                className="flex min-h-40 w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-accent-edge bg-accent-soft text-xl font-semibold text-accent-ink transition-colors hover:bg-accent-soft/70 disabled:opacity-60"
+                className="flex min-h-32 w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-accent-edge bg-accent-soft text-lg sm:min-h-40 sm:text-xl font-semibold text-accent-ink transition-colors hover:bg-accent-soft/70 disabled:opacity-60"
               >
                 {photos.length ? <ImagePlus className="size-10" aria-hidden /> : <Camera className="size-10" aria-hidden />}
                 {photoBusy ? "Adding your photo…" : photos.length ? "Add another photo" : "Take or choose a photo"}
@@ -367,7 +390,7 @@ export default function ReportPage() {
                         className={`size-6 shrink-0 ${emergency ? "accent-danger" : "accent-accent"}`}
                       />
                       <span>
-                        <span className="block text-xl font-semibold">{label}</span>
+                        <span className="block text-lg font-semibold sm:text-xl">{label}</span>
                         <span className="block text-lg text-muted">{hint}</span>
                       </span>
                     </label>

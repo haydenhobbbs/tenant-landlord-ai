@@ -52,8 +52,8 @@ export function HomeLink() {
   };
 
   return (
-    <section aria-labelledby="connect" className="rounded-xl border-2 border-accent-edge/50 bg-accent-soft p-5 sm:p-6">
-      <h2 id="connect" className="flex items-center gap-2 text-xl font-bold">
+    <section aria-labelledby="connect" className="rounded-xl border-2 border-accent-edge/50 bg-accent-soft p-4 sm:p-6">
+      <h2 id="connect" className="flex items-center gap-2 text-lg font-bold sm:text-xl">
         <Link2 className="size-5" aria-hidden />
         Connect to your landlord
       </h2>

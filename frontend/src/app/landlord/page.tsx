@@ -1,18 +1,27 @@
 "use client";
 
+// 🏢 LANDLORD REQUESTS. Tabs ("Needs you" / "In progress" / "Done") show one
+// group at a time so a phone isn't one long column; cards put the contractor,
+// price, and time side by side with Approve / Decline next to each other.
+// (Layout by Nermin; approve/decline/complete logic unchanged.)
+
 import Link from "next/link";
 import { useState } from "react";
+import { ChevronRight, Clock, DollarSign, UserCheck } from "lucide-react";
 import { StatusBadge, UrgencyBadge } from "@/components/StatusBadge";
 import { useLandlordRequests } from "@/lib/useLandlordRequests";
 import { formatInZone, formatPrice } from "@/lib/format";
 import type { MaintenanceRequest } from "@/lib/types";
 import { authFetch } from "@/lib/authFetch";
 
+type TabKey = "needs" | "progress" | "done";
+
 export default function LandlordPage() {
   const { requests, loading, error, reload } = useLandlordRequests();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
   const [notice, setNotice] = useState("");
+  const [chosen, setChosen] = useState<TabKey | null>(null);
 
   async function act(id: string, action: "approve" | "decline" | "complete", offerIndex?: number) {
     if (busyId) return;
@@ -29,36 +38,260 @@ export default function LandlordPage() {
     finally { setBusyId(null); }
   }
 
-  const pending = requests.filter((request) => request.status === "contractor_suggested");
-  const working = requests.filter((request) => request.status === "submitted" || request.status === "finding_contractor");
-  const booked = requests.filter((request) => request.status === "landlord_approved" || request.status === "scheduled");
-  const history = requests.filter((request) => request.status === "completed" || request.status === "declined");
+  const pending = requests.filter((r) => r.status === "contractor_suggested");
+  const working = requests.filter((r) => r.status === "submitted" || r.status === "finding_contractor");
+  const booked = requests.filter((r) => r.status === "landlord_approved" || r.status === "scheduled");
+  const history = requests.filter((r) => r.status === "completed" || r.status === "declined");
 
-  return <div className="space-y-8">
-    <header><h1 className="text-3xl font-bold tracking-tight">Repair requests</h1><p className="mt-2 text-base text-muted">Review the suggested contractor, price, and time before deciding.</p></header>
-    {notice && <p role="status" className="rounded-xl bg-ok-soft px-4 py-3 text-ok-ink">{notice}</p>}
-    {actionError && <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-danger-ink">{actionError}</p>}
-    {error && <div role="alert" className="rounded-xl border border-danger/30 bg-danger-soft p-5 text-danger-ink"><p>{error}</p><button type="button" onClick={() => void reload()} className="mt-3 font-semibold underline">Try again</button></div>}
-    {loading && <p role="status" className="rounded-xl border border-line bg-surface p-6 text-muted">Loading repair requests…</p>}
+  // Open on whatever needs attention first.
+  const tab: TabKey = chosen ?? (pending.length ? "needs" : working.length + booked.length ? "progress" : "needs");
+  const tabs: { key: TabKey; label: string; count: number }[] = [
+    { key: "needs", label: "Needs you", count: pending.length },
+    { key: "progress", label: "In progress", count: working.length + booked.length },
+    { key: "done", label: "Done", count: history.length },
+  ];
 
-    {!loading && !error && requests.length === 0 && <div className="rounded-xl border border-landlord-edge/40 bg-surface p-6 shadow-sm"><p className="text-lg font-bold">No repair requests yet</p><p className="mt-1 text-base text-muted">Requests show up here once your tenants join. Send them the invite code or link for their home.</p><Link href="/landlord/properties" className="mt-4 inline-flex min-h-12 items-center rounded-lg bg-accent px-6 text-base font-bold text-on-accent hover:bg-accent-hover">Invite your tenants</Link></div>}
-    {!loading && !error && <section aria-labelledby="needs-review" className="space-y-4">
-      <h2 id="needs-review" className="text-xl font-bold">Needs your decision <span className="text-landlord-ink">({pending.length})</span></h2>
-      {pending.length === 0 && <div className="rounded-xl border border-dashed border-landlord-edge/40 bg-landlord-soft p-7"><p className="font-semibold">No requests need approval right now.</p><p className="mt-1 text-sm text-muted">New contractor suggestions will appear here.</p></div>}
-      {pending.map((request) => <article key={request.id} className="rounded-xl border border-line bg-surface p-5 shadow-sm sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex flex-wrap items-center gap-2"><h3 className="text-xl font-bold">{request.title}</h3><UrgencyBadge urgency={request.urgency} /></div><p className="mt-1 text-sm text-muted">{request.tenantName} · {request.unit}</p></div><Link href={`/landlord/requests/${encodeURIComponent(request.id)}`} className="rounded-lg px-2 py-2 font-semibold text-landlord-ink underline underline-offset-2 focus-visible:outline focus-visible:outline-2">View details</Link></div>
-        <p className="mt-4 line-clamp-2 text-base text-muted">{request.description}</p>
-        {request.suggestions[0] && <div className="mt-5 grid gap-4 rounded-xl border border-landlord-edge/40 bg-landlord-soft p-4 sm:grid-cols-3"><div><p className="text-sm text-muted">Top suggestion</p><p className="font-bold">{request.suggestions[0].contractor.name}</p></div><div><p className="text-sm text-muted">Quoted price</p><p className="text-xl font-bold">{request.suggestions[0].price != null ? formatPrice(request.suggestions[0].price) : "Awaiting quote"}</p></div><div><p className="text-sm text-muted">Available</p><p className="font-bold">{request.suggestions[0].availableAt ? formatInZone(request.suggestions[0].availableAt, request.property?.state) : "To be confirmed"}</p></div></div>}
-        <div className="mt-5 flex flex-wrap gap-3"><button type="button" onClick={() => void act(request.id, "approve", 0)} disabled={busyId !== null || !request.suggestions[0]} className="min-h-12 rounded-lg bg-accent text-on-accent px-6 py-3 text-base font-bold hover:bg-accent-hover focus-visible:outline focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60">{busyId === request.id ? "Saving…" : "Approve top choice"}</button><button type="button" onClick={() => void act(request.id, "decline")} disabled={busyId !== null} className="min-h-12 rounded-lg border border-line-strong px-6 py-3 text-base font-bold text-fg hover:bg-sunken focus-visible:outline focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60">Decline request</button></div>
-        {request.suggestions.length > 1 && <p className="mt-3 text-sm text-muted">{request.suggestions.length - 1} more {request.suggestions.length === 2 ? "option" : "options"} on the detail page.</p>}
-      </article>)}
-    </section>}
-    {!loading && !error && working.length > 0 && <RequestList title="Finding contractors" requests={working} />}
-    {!loading && !error && booked.length > 0 && <RequestList title="Approved and scheduled" requests={booked} onComplete={(id) => void act(id, "complete")} busyId={busyId} />}
-    {!loading && !error && history.length > 0 && <RequestList title="History" requests={history} />}
-  </div>;
+  return (
+    <div className="space-y-5 sm:space-y-6">
+      <header>
+        <h1 className="text-[1.6rem] leading-tight font-semibold sm:text-[2rem]">Repair requests</h1>
+        <p className="mt-1 text-base text-muted sm:text-lg">Check the contractor, price, and time, then decide.</p>
+      </header>
+
+      {notice && <p role="status" className="rounded-xl bg-ok-soft px-4 py-3 text-lg text-ok-ink">{notice}</p>}
+      {actionError && <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-lg text-danger-ink">{actionError}</p>}
+      {error && (
+        <div role="alert" className="rounded-xl border border-danger/30 bg-danger-soft p-5 text-danger-ink">
+          <p>{error}</p>
+          <button type="button" onClick={() => void reload()} className="mt-3 min-h-11 font-semibold underline">Try again</button>
+        </div>
+      )}
+      {loading && (
+        <div className="grid gap-3 sm:grid-cols-2" aria-label="Loading repair requests">
+          <div className="skeleton h-44" />
+          <div className="skeleton h-44" />
+        </div>
+      )}
+
+      {!loading && !error && requests.length === 0 && (
+        <div className="rounded-xl border border-landlord-edge/40 bg-surface p-6">
+          <p className="text-lg font-bold">No repair requests yet</p>
+          <p className="mt-1 text-lg text-muted">Requests show up here once your tenants join. Send them the invite code or link for their home.</p>
+          <Link href="/landlord/properties" className="mt-4 inline-flex min-h-12 items-center rounded-lg bg-accent px-6 text-lg font-bold text-on-accent hover:bg-accent-hover">
+            Invite your tenants
+          </Link>
+        </div>
+      )}
+
+      {!loading && !error && requests.length > 0 && (
+        <>
+          {/* Tabs: one group at a time */}
+          <div role="tablist" aria-label="Requests" className="grid grid-cols-3 gap-1 rounded-xl bg-sunken p-1">
+            {tabs.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                role="tab"
+                aria-selected={tab === t.key}
+                onClick={() => setChosen(t.key)}
+                className={`flex min-h-12 cursor-pointer flex-col items-center justify-center rounded-lg px-1 leading-tight transition-colors sm:flex-row sm:gap-2 ${
+                  tab === t.key ? "bg-surface text-fg shadow-card" : "text-muted hover:text-fg"
+                }`}
+              >
+                <span className="text-[0.9rem] font-semibold sm:text-lg">{t.label}</span>
+                <span
+                  className={`tabular text-[0.9rem] font-bold sm:text-base ${
+                    t.key === "needs" && t.count > 0 ? "text-danger-ink" : tab === t.key ? "text-landlord-ink" : ""
+                  }`}
+                >
+                  {t.count}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {tab === "needs" &&
+            (pending.length === 0 ? (
+              <Empty text="Nothing needs your decision right now." sub="New contractor quotes will appear here." />
+            ) : (
+              <ul className="grid gap-4 lg:grid-cols-2">
+                {pending.map((r) => (
+                  <PendingCard
+                    key={r.id}
+                    request={r}
+                    busy={busyId !== null}
+                    saving={busyId === r.id}
+                    onApprove={() => void act(r.id, "approve", 0)}
+                    onDecline={() => void act(r.id, "decline")}
+                  />
+                ))}
+              </ul>
+            ))}
+
+          {tab === "progress" &&
+            (working.length + booked.length === 0 ? (
+              <Empty text="Nothing in progress." sub="Approved and booked repairs show up here." />
+            ) : (
+              <div className="space-y-5 sm:space-y-6">
+                {booked.length > 0 && (
+                  <Group title="Booked">
+                    {booked.map((r) => (
+                      <Row key={r.id} request={r}>
+                        {r.status === "scheduled" && (
+                          <button
+                            type="button"
+                            disabled={!!busyId}
+                            onClick={() => void act(r.id, "complete")}
+                            className="min-h-11 shrink-0 cursor-pointer rounded-lg px-3 text-base font-semibold ring-1 ring-line-strong hover:bg-sunken disabled:opacity-60"
+                          >
+                            Mark done
+                          </button>
+                        )}
+                      </Row>
+                    ))}
+                  </Group>
+                )}
+                {working.length > 0 && (
+                  <Group title="Finding contractors">
+                    {working.map((r) => (
+                      <Row key={r.id} request={r} />
+                    ))}
+                  </Group>
+                )}
+              </div>
+            ))}
+
+          {tab === "done" &&
+            (history.length === 0 ? (
+              <Empty text="No finished repairs yet." />
+            ) : (
+              <Group>
+                {history.map((r) => (
+                  <Row key={r.id} request={r} />
+                ))}
+              </Group>
+            ))}
+        </>
+      )}
+    </div>
+  );
 }
 
-function RequestList({ title, requests, onComplete, busyId }: { title: string; requests: MaintenanceRequest[]; onComplete?: (id: string) => void; busyId?: string | null }) {
-  return <section className="space-y-3"><h2 className="text-xl font-bold">{title}</h2>{requests.map((request) => <div key={request.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface p-4"><Link href={`/landlord/requests/${encodeURIComponent(request.id)}`} className="font-semibold text-landlord-ink underline underline-offset-2 focus-visible:outline focus-visible:outline-2">{request.title} · {request.unit}</Link><div className="flex flex-wrap items-center gap-3"><StatusBadge status={request.status} />{onComplete && request.status === "scheduled" && <button type="button" disabled={!!busyId} onClick={() => onComplete(request.id)} className="rounded-lg border border-line-strong px-3 py-2 font-semibold hover:bg-sunken disabled:opacity-60">Mark done</button>}</div></div>)}</section>;
+function PendingCard({
+  request: r,
+  busy,
+  saving,
+  onApprove,
+  onDecline,
+}: {
+  request: MaintenanceRequest;
+  busy: boolean;
+  saving: boolean;
+  onApprove: () => void;
+  onDecline: () => void;
+}) {
+  const top = r.suggestions[0];
+  return (
+    <li className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-4 sm:p-5">
+      <Link href={`/landlord/requests/${encodeURIComponent(r.id)}`} className="group flex items-start justify-between gap-3">
+        <span className="min-w-0">
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="text-lg leading-tight font-semibold sm:text-xl">{r.title}</span>
+            <UrgencyBadge urgency={r.urgency} />
+          </span>
+          <span className="mt-1 block text-[0.9rem] text-muted sm:text-base">
+            {r.tenantName} · {r.unit}
+          </span>
+        </span>
+        <span className="inline-flex shrink-0 items-center text-base font-semibold text-landlord-ink">
+          Details
+          <ChevronRight className="size-5 transition-transform group-hover:translate-x-0.5" aria-hidden />
+        </span>
+      </Link>
+
+      {top ? (
+        <dl className="grid grid-cols-3 gap-2 rounded-lg bg-landlord-soft p-3">
+          <Fact icon={UserCheck} label="Pro" value={top.contractor.name} />
+          <Fact icon={DollarSign} label="Price" value={top.price != null ? formatPrice(top.price) : "Waiting"} />
+          <Fact icon={Clock} label="When" value={top.availableAt ? formatInZone(top.availableAt, r.property?.state) : "TBD"} />
+        </dl>
+      ) : (
+        <p className="rounded-lg bg-sunken p-3 text-base text-muted">Waiting for a quote.</p>
+      )}
+
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={onApprove}
+          disabled={busy || !top}
+          className="min-h-12 cursor-pointer rounded-lg bg-accent px-3 text-base font-bold sm:min-h-13 sm:text-lg text-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {saving ? "Saving…" : "Approve"}
+        </button>
+        <button
+          type="button"
+          onClick={onDecline}
+          disabled={busy}
+          className="min-h-12 cursor-pointer rounded-lg px-3 text-base font-bold text-fg sm:min-h-13 sm:text-lg ring-1 ring-line-strong hover:bg-sunken disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Decline
+        </button>
+      </div>
+      {r.suggestions.length > 1 && (
+        <Link href={`/landlord/requests/${encodeURIComponent(r.id)}`} className="text-base font-semibold text-landlord-ink underline underline-offset-2">
+          See {r.suggestions.length - 1} other {r.suggestions.length === 2 ? "option" : "options"}
+        </Link>
+      )}
+    </li>
+  );
+}
+
+function Fact({ icon: Icon, label, value }: { icon: typeof Clock; label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <dt className="flex items-center gap-1 text-[0.85rem] font-medium text-muted">
+        <Icon className="size-3.5" aria-hidden />
+        {label}
+      </dt>
+      <dd className="mt-0.5 text-[0.9rem] leading-snug font-semibold break-words sm:text-base">{value}</dd>
+    </div>
+  );
+}
+
+function Group({ title, children }: { title?: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-3">
+      {title && <h2 className="text-[1.3rem] leading-tight">{title}</h2>}
+      <ul className="grid gap-3 lg:grid-cols-2">{children}</ul>
+    </section>
+  );
+}
+
+function Row({ request: r, children }: { request: MaintenanceRequest; children?: React.ReactNode }) {
+  const when = r.scheduledAt ?? r.selected?.availableAt;
+  return (
+    <li className="flex items-center gap-3 rounded-xl border border-line bg-surface p-3.5 sm:p-4">
+      <Link href={`/landlord/requests/${encodeURIComponent(r.id)}`} className="min-w-0 flex-1">
+        <span className="block truncate text-base font-semibold sm:text-lg">{r.title}</span>
+        <span className="block truncate text-[0.9rem] text-muted sm:text-base">
+          {r.unit}
+          {r.selected ? ` · ${r.selected.contractor.name}` : ""}
+          {when ? ` · ${formatInZone(when, r.property?.state)}` : ""}
+        </span>
+        <span className="mt-1.5 inline-block">
+          <StatusBadge status={r.status} />
+        </span>
+      </Link>
+      {children}
+    </li>
+  );
+}
+
+function Empty({ text, sub }: { text: string; sub?: string }) {
+  return (
+    <div className="rounded-xl border-2 border-dashed border-line p-7 text-center">
+      <p className="text-lg font-semibold">{text}</p>
+      {sub && <p className="mt-1 text-lg text-muted">{sub}</p>}
+    </div>
+  );
 }

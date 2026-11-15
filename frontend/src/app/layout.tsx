@@ -44,7 +44,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <Suspense fallback={<div className="h-[69px] border-b border-navy-line bg-navy" />}>
             <NavBar />
           </Suspense>
-          <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-10 sm:px-8">{children}</main>
+          {/* On phones, leave room at the bottom for the tab bar (BottomTabBar sets html.has-tabbar). */}
+          <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-8 sm:py-10 max-md:[html.has-tabbar_&]:pb-[calc(8rem+env(safe-area-inset-bottom))]">
+            {children}
+          </main>
           </MessageAlertsProvider>
         </AuthProvider>
       </body>

@@ -45,8 +45,8 @@ export function PropertyInvite({ property: p }: { property: Pick<InviteProperty,
     }
   }
 
-  return <div className="space-y-3 rounded-lg bg-landlord-soft p-4">
-    <div><p className="text-sm font-semibold text-muted">Invite code</p><p className="break-all font-mono text-2xl font-bold tracking-wider">{p.inviteCode}</p></div>
+  return <div className="space-y-2 rounded-lg bg-landlord-soft p-3.5">
+    <div><p className="text-sm font-semibold text-muted">Invite code</p><p className="break-all font-mono text-xl font-bold tracking-wider">{p.inviteCode}</p></div>
     <p className="break-all text-sm text-muted">{link}</p>
     <div className="flex flex-wrap gap-2">
       <Button variant="secondary" size="md" icon={copied === "link" ? <Check aria-hidden /> : <Copy aria-hidden />} onClick={() => void copy("link")}>{copied === "link" ? "Link copied" : "Copy invite link"}</Button>
