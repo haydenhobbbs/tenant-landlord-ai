@@ -29,7 +29,7 @@ const REQUEST_PREFIX = "New repair request:";
 // bottom tabs. The contact header and the message box stay put; only the
 // messages scroll. Wide screens keep the normal page flow.
 export const PHONE_CHAT_PANEL =
-  "max-md:fixed max-md:inset-x-0 max-md:top-[calc(4rem+1px+env(safe-area-inset-top))] max-md:bottom-[calc(3.5rem+1px+max(0.85rem,calc(env(safe-area-inset-bottom)+0.35rem)))] max-md:z-30 max-md:flex max-md:flex-col max-md:gap-3 max-md:bg-bg max-md:px-4 max-md:pt-3 max-md:pb-2";
+  "max-md:fixed max-md:inset-x-0 max-md:top-[calc(4rem+1px+env(safe-area-inset-top))] max-md:bottom-[calc(3.25rem+1px+max(0.75rem,env(safe-area-inset-bottom)))] max-md:z-30 max-md:flex max-md:flex-col max-md:gap-3 max-md:bg-bg max-md:px-4 max-md:pt-3 max-md:pb-2";
 
 export function ChatThread({ tenantId, me, otherName = "them", timeZone, quickReplies = [], requestsHref }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
