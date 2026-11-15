@@ -14,7 +14,7 @@ export default function LandlordPage() {
   const [actionError, setActionError] = useState("");
   const [notice, setNotice] = useState("");
 
-  async function act(id: string, action: "approve" | "decline" | "complete", offerIndex?: number) {
+  async function act(id: string, action: "find" | "approve" | "decline" | "complete", offerIndex?: number) {
     if (busyId) return;
     setBusyId(id); setActionError(""); setNotice("");
     try {
@@ -23,14 +23,16 @@ export default function LandlordPage() {
         body: JSON.stringify({ action, offerIndex }),
       });
       if (!response.ok) throw new Error("Update failed");
-      setNotice(action === "approve" ? "Contractor approved." : action === "decline" ? "Request declined." : "Job marked complete.");
+      setNotice(action === "find" ? "The AI is contacting your trusted contractor now. Quotes will show up here." : action === "approve" ? "Contractor approved." : action === "decline" ? "Request declined." : "Job marked complete.");
       await reload();
     } catch { setActionError("Your change was not saved. Please try again."); }
     finally { setBusyId(null); }
   }
 
   const pending = requests.filter((request) => request.status === "contractor_suggested");
-  const working = requests.filter((request) => request.status === "submitted" || request.status === "finding_contractor");
+  // New requests wait for the landlord: nothing is emailed until they choose.
+  const fresh = requests.filter((request) => request.status === "submitted");
+  const working = requests.filter((request) => request.status === "finding_contractor");
   const booked = requests.filter((request) => request.status === "landlord_approved" || request.status === "scheduled");
   const history = requests.filter((request) => request.status === "completed" || request.status === "declined");
 
@@ -42,9 +44,23 @@ export default function LandlordPage() {
     {loading && <p role="status" className="rounded-xl border border-line bg-surface p-6 text-muted">Loading repair requests…</p>}
 
     {!loading && !error && requests.length === 0 && <div className="rounded-xl border border-landlord-edge/40 bg-surface p-6 shadow-sm"><p className="text-lg font-bold">No repair requests yet</p><p className="mt-1 text-base text-muted">Requests show up here once your tenants join. Send them the invite code or link for their home.</p><Link href="/landlord/properties" className="mt-4 inline-flex min-h-12 items-center rounded-lg bg-accent px-6 text-base font-bold text-on-accent hover:bg-accent-hover">Invite your tenants</Link></div>}
+    {!loading && !error && fresh.length > 0 && <section aria-labelledby="new-requests" className="space-y-4">
+      <h2 id="new-requests" className="text-xl font-bold">New requests: how should we handle these? <span className="text-landlord-ink">({fresh.length})</span></h2>
+      <p className="-mt-2 text-base text-muted">Nothing has been sent to any contractor yet. Pick one option.</p>
+      {fresh.map((request) => <article key={request.id} className="rounded-xl border-2 border-landlord-edge/50 bg-surface p-5 shadow-sm sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex flex-wrap items-center gap-2"><h3 className="text-xl font-bold">{request.title}</h3><UrgencyBadge urgency={request.urgency} />{request.trade && <span className="rounded-full bg-sunken px-3 py-1 text-sm font-semibold capitalize">{request.trade}</span>}</div><p className="mt-1 text-sm text-muted">{request.tenantName} · {request.unit}</p></div><Link href={`/landlord/requests/${encodeURIComponent(request.id)}`} className="rounded-lg px-2 py-2 font-semibold text-landlord-ink underline underline-offset-2">View details</Link></div>
+        <p className="mt-4 line-clamp-3 text-base text-muted">{request.description}</p>
+        {request.legalGuidance?.summary && <p className="mt-3 rounded-lg bg-landlord-soft p-3 text-sm"><span className="font-semibold">Repair rules: </span>{request.legalGuidance.summary}</p>}
+        <div className="mt-5 flex flex-wrap gap-3">
+          <button type="button" onClick={() => void act(request.id, "find")} disabled={busyId !== null} className="min-h-12 rounded-lg bg-accent px-6 py-3 text-base font-bold text-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60">{busyId === request.id ? "Sending…" : "Have the AI contact a contractor"}</button>
+          <Link href={`/landlord/requests/${encodeURIComponent(request.id)}#small-job`} className="inline-flex min-h-12 items-center rounded-lg border border-line-strong px-5 font-bold hover:bg-sunken">I&apos;ll take care of it myself</Link>
+          <button type="button" onClick={() => void act(request.id, "decline")} disabled={busyId !== null} className="min-h-12 rounded-lg px-4 font-semibold text-muted hover:bg-sunken disabled:opacity-60">Decline</button>
+        </div>
+      </article>)}
+    </section>}
     {!loading && !error && <section aria-labelledby="needs-review" className="space-y-4">
-      <h2 id="needs-review" className="text-xl font-bold">Needs your decision <span className="text-landlord-ink">({pending.length})</span></h2>
-      {pending.length === 0 && <div className="rounded-xl border border-dashed border-landlord-edge/40 bg-landlord-soft p-7"><p className="font-semibold">No requests need approval right now.</p><p className="mt-1 text-sm text-muted">New contractor suggestions will appear here.</p></div>}
+      <h2 id="needs-review" className="text-xl font-bold">Quotes to approve <span className="text-landlord-ink">({pending.length})</span></h2>
+      {pending.length === 0 && <div className="rounded-xl border border-dashed border-landlord-edge/40 bg-landlord-soft p-7"><p className="font-semibold">No quotes waiting right now.</p><p className="mt-1 text-sm text-muted">When a contractor replies with a price and a time, it shows up here.</p></div>}
       {pending.map((request) => <article key={request.id} className="rounded-xl border border-line bg-surface p-5 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex flex-wrap items-center gap-2"><h3 className="text-xl font-bold">{request.title}</h3><UrgencyBadge urgency={request.urgency} /></div><p className="mt-1 text-sm text-muted">{request.tenantName} · {request.unit}</p></div><Link href={`/landlord/requests/${encodeURIComponent(request.id)}`} className="rounded-lg px-2 py-2 font-semibold text-landlord-ink underline underline-offset-2 focus-visible:outline focus-visible:outline-2">View details</Link></div>
         <p className="mt-4 line-clamp-2 text-base text-muted">{request.description}</p>

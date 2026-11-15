@@ -17,7 +17,7 @@ import {
 } from "./outreach";
 import { listMessages } from "./outreach/db";
 import { addMessage } from "./tenantData";
-import { saveRequest } from "./store";
+import { getRequest, saveRequest } from "./store";
 import { timeZoneFor } from "./timezone";
 import type { Contractor, ContractorOffer, MaintenanceRequest } from "./types";
 
@@ -30,19 +30,41 @@ function contactLimit(): number {
   return process.env.DEMO_CONTRACTOR_EMAIL || process.env.DEMO_CONTRACTOR_PHONE ? 1 : MAX_CONTACTS;
 }
 
-// Tenant just submitted -> AI finds + contacts contractors -> landlord gets suggestions.
+// Tenant just submitted -> AI sorts it and researches the rules -> landlord decides.
+// NO contractor is contacted here: the landlord may fix it themselves, so outreach
+// waits until they press "Have the AI contact a contractor" (findContractors).
 export async function processNewRequest(request: MaintenanceRequest): Promise<MaintenanceRequest> {
   const { trade, urgency } = await triageRequest(request);
-  request = await saveRequest({ ...request, trade, urgency, status: "finding_contractor" });
+  request = await saveRequest({ ...request, trade, urgency });
+  await notify(
+    { userId: request.landlordId, name: "Landlord" },
+    `New repair request needs your decision: ${request.title}`,
+    { link: `/landlord/requests/${request.id}`, requestId: request.id },
+  );
 
-  // Legal research runs in the background while contractors are contacted.
-  const legalPromise = getLegalGuidance(request);
+  const legalGuidance = await getLegalGuidance(request);
+  // Reload so a decision the landlord made during the research isn't overwritten.
+  const latest = (await getRequest(request.id)) ?? request;
+  return saveRequest({ ...latest, trade: latest.trade ?? trade, urgency: latest.urgency ?? urgency, legalGuidance });
+}
+
+// Landlord said "go": the AI contacts contractors (trusted ones first) and
+// replies become suggestions the landlord can approve.
+export async function findContractors(request: MaintenanceRequest): Promise<MaintenanceRequest> {
+  let trade = request.trade;
+  if (!trade) {
+    // The landlord decided before sorting finished; sort now.
+    const triage = await triageRequest(request);
+    trade = triage.trade;
+    request = await saveRequest({ ...request, trade, urgency: triage.urgency });
+  }
 
   const [preapproved, online] = await Promise.all([
     getPreapprovedContractors(request.landlordId, trade),
     searchContractorsOnline(trade, request.property),
   ]);
-  const candidates = [...preapproved, ...online].slice(0, contactLimit());
+  const alreadyContacted = new Set((await listMessages(request.id)).filter((m) => m.direction === "outbound").map((m) => m.contractor.id));
+  const candidates = [...preapproved, ...online].filter((c) => !alreadyContacted.has(c.id)).slice(0, contactLimit());
 
   // Contact all candidates at once.
   const results = await Promise.all(
@@ -54,23 +76,29 @@ export async function processNewRequest(request: MaintenanceRequest): Promise<Ma
     }),
   );
   const offers = results.filter((o): o is Omit<ContractorOffer, "aiReason"> => o !== null);
+  if (!offers.length) return request; // real email: replies arrive later through the webhook
 
-  const [suggestions, legalGuidance] = await Promise.all([rankOffers(request, offers), legalPromise]);
+  const latest = (await getRequest(request.id)) ?? request;
+  if (!OPEN_STATUSES.includes(latest.status)) return latest;
+  const previous = latest.suggestions.map(({ contractor, channel, available, availableAt, price }) => ({ contractor, channel, available, availableAt, price }));
+  const suggestions = await rankOffers(latest, [...previous, ...offers]);
+  request = await saveRequest({ ...latest, suggestions, status: "contractor_suggested" });
+  await notify(
+    { userId: request.tenantId, name: request.tenantName },
+    `We found ${suggestions.length === 1 ? "a repair person" : `${suggestions.length} repair people`} for "${request.title}". Waiting on your landlord to choose.`,
+    { link: `/tenant/requests/${request.id}`, requestId: request.id },
+  );
+  return request;
+}
 
-  request = await saveRequest({
-    ...request,
-    suggestions,
-    legalGuidance,
-    status: suggestions.length ? "contractor_suggested" : "finding_contractor",
-  });
-  await notify({ userId: request.landlordId, name: "Landlord" }, `New repair request needs your approval: ${request.title}`);
-  if (suggestions.length) {
-    await notify(
-      { userId: request.tenantId, name: request.tenantName },
-      `We found ${suggestions.length === 1 ? "a repair person" : `${suggestions.length} repair people`} for "${request.title}". Waiting on your landlord to choose.`,
-      { link: `/tenant/requests/${request.id}`, requestId: request.id },
-    );
-  }
+/** Mark the request as "finding a contractor" right away and tell the tenant. */
+export async function startFindingContractors(request: MaintenanceRequest): Promise<MaintenanceRequest> {
+  request = await saveRequest({ ...request, status: "finding_contractor" });
+  await notify(
+    { userId: request.tenantId, name: request.tenantName },
+    `Your landlord approved "${request.title}". We're contacting repair people now.`,
+    { link: `/tenant/requests/${request.id}`, requestId: request.id },
+  );
   return request;
 }
 
@@ -139,6 +167,7 @@ export async function contactExtraContractor(
   void _contacted;
   const channel = pickChannel(clean);
   const message = await writeOutreachMessage(request, clean, channel);
+  if (request.status === "submitted") request = await startFindingContractors(request);
   const { reply } = await contactContractor(clean, message, channel, { requestId: request.id });
   // With no email/SMS keys the contact is simulated and replies right away.
   if (reply) await onContractorReply(request.id, clean, reply, channel);

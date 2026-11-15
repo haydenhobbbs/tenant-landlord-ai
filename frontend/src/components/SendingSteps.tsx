@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 
-const STEPS = ["Saving your request", "Looking for a repair person", "Getting a price and a time"];
+const STEPS = ["Saving your request", "Sorting out what kind of repair it is", "Sending it to your landlord"];
 
 export function SendingSteps() {
   const [step, setStep] = useState(0);

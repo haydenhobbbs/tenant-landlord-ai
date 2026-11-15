@@ -1,7 +1,10 @@
-import { NextResponse, connection } from "next/server";
-import { approveRequest, completeRequest, declineRequest, handleItMyself } from "@/lib/pipeline";
+import { NextResponse, after, connection } from "next/server";
+import { approveRequest, completeRequest, declineRequest, findContractors, handleItMyself, startFindingContractors } from "@/lib/pipeline";
 import { getRequest } from "@/lib/store";
 import { canSeeRequest, demoFrom, forbidden, getCaller, isRequestLandlord, unauthorized } from "@/lib/serverAuth";
+
+// Contacting contractors (AI writes each email) runs after the response.
+export const maxDuration = 120;
 
 // GET /api/requests/:id -> one request (the tenant's repair page)
 export async function GET(req: Request, ctx: RouteContext<"/api/requests/[id]">) {
@@ -16,6 +19,8 @@ export async function GET(req: Request, ctx: RouteContext<"/api/requests/[id]">)
 }
 
 // PATCH /api/requests/:id
+//   { action: "find" }                          landlord: have the AI contact contractors
+//   { action: "self", when?, note? }            landlord will fix it personally
 //   { action: "approve", offerIndex?: number }  landlord approves a contractor
 //   { action: "decline" }                       landlord declines
 //   { action: "complete" }                      job is done
@@ -37,6 +42,22 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/requests/[id]"
       return NextResponse.json(await approveRequest(request, body.offerIndex ?? 0));
     case "decline":
       return NextResponse.json(await declineRequest(request));
+    case "find": {
+      // Nothing is emailed until the landlord says so. Answer right away;
+      // the emails go out in the background (about 20 seconds).
+      if (request.status !== "submitted") {
+        return NextResponse.json({ error: `This request is already ${request.status}.` }, { status: 409 });
+      }
+      const started = await startFindingContractors(request);
+      after(async () => {
+        try {
+          await findContractors(started);
+        } catch (err) {
+          console.error("[requests] Contacting contractors failed", id, err);
+        }
+      });
+      return NextResponse.json(started);
+    }
     case "self": {
       // { action: "self", when?, note? } landlord will do the repair personally
       const result = await handleItMyself(request, { id: caller.id, name: caller.name }, { when: body.when, note: body.note });
@@ -45,6 +66,6 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/requests/[id]"
     case "complete":
       return NextResponse.json(await completeRequest(request));
     default:
-      return NextResponse.json({ error: "action must be approve, decline, self or complete" }, { status: 400 });
+      return NextResponse.json({ error: "action must be find, self, approve, decline or complete" }, { status: 400 });
   }
 }

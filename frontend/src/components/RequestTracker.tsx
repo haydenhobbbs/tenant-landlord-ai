@@ -9,11 +9,13 @@ import type { MaintenanceRequest } from "@/lib/types";
 // things stand. When the status changes (the page polls every 5s), the steps
 // that changed replay their animation because their key changes.
 
-const STEPS = ["Sent", "Finding a repair person", "Waiting on landlord", "Booked", "Fixed"];
+// The landlord decides first (fix it themselves, or have the AI contact
+// contractors), then quotes come in and they pick one.
+const STEPS = ["Sent", "Landlord reviewing", "Getting a price and a time", "Booked", "Fixed"];
 
 const STEP_FOR_STATUS: Record<string, number> = {
   submitted: 1,
-  finding_contractor: 1,
+  finding_contractor: 2,
   awaiting_approval: 2,
   contractor_suggested: 2,
   approved: 3,
@@ -28,15 +30,15 @@ export function currentStep(status: string) {
 
 const HINTS = [
   "We got your request.",
-  "We're contacting local repair people for a price and a time.",
-  "We found someone. Your landlord just needs to approve.",
+  "Your landlord is deciding how to fix it: themselves, or with a repair person.",
+  "We're contacting repair people for a price and a time. Your landlord picks one.",
   "You'll get a reminder before they arrive.",
   "All done.",
 ];
 
 export function RequestTracker({ request }: { request: MaintenanceRequest }) {
   const declined = request.status === "declined";
-  const step = declined ? 2 : currentStep(request.status);
+  const step = declined ? 1 : currentStep(request.status); // declined = stopped at the landlord step
 
   return (
     <ol>

@@ -80,11 +80,11 @@ ${request.description}`,
   );
   await notify(
     { userId: request.tenantId, name: request.tenantName },
-    `Got it. We're contacting repair people about "${request.title}".`,
+    `Got it. We sent "${request.title}" to your landlord.`,
     { link: `/tenant/requests/${id}`, requestId: id },
   );
-  // The AI work (triage, contacting contractors, legal research) takes up to a
-  // minute. Answer right away so the tenant lands on their request's page (it
+  // The AI work (sorting the request, researching repair rules) takes up to a
+  // minute. Contractors are NOT contacted here; the landlord decides first. Answer right away so the tenant lands on their request's page (it
   // refreshes itself), and keep working after the response is sent.
   after(async () => {
     try {

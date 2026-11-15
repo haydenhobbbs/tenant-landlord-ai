@@ -230,6 +230,10 @@ function longDateTime(iso: string) {
 function statusSummary(r: MaintenanceRequest, when?: string): { headline: string; next: string } {
   switch (r.status) {
     case "submitted":
+      return {
+        headline: "Your landlord is reviewing your request",
+        next: "They’ll either fix it themselves or have us find a repair person. We’ll let you know either way.",
+      };
     case "finding_contractor":
       return {
         headline: "We’re contacting repair people",
