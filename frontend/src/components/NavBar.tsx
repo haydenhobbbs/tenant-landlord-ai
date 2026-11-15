@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Building2, CalendarDays, FileText, Home, LayoutGrid, MessageCircle, Settings, Wrench, UserCheck, type LucideIcon } from "lucide-react";
+import { Bell, Building2, CalendarDays, FileText, Home, LayoutGrid, MessageCircle, Settings, Wrench, type LucideIcon } from "lucide-react";
 import { BottomTabBar } from "@/components/BottomTabBar";
 import { TenlyLogo } from "@/components/TenlyLogo";
 import { homeFor, useAuth, type Role } from "@/lib/auth";
@@ -21,13 +21,17 @@ const LINKS: Record<Role, NavLink[]> = {
   ],
   landlord: [
     // Same top bar as tenants, with every landlord section (Nermin).
-    { href: "/landlord", label: "Requests", icon: Wrench, exact: true },
-    { href: "/landlord/properties", label: "Properties", icon: Building2 },
+    { href: "/landlord", label: "Home", icon: Home, exact: true },
     { href: "/landlord/messages", label: "Messages", icon: MessageCircle },
     { href: "/landlord/calendar", label: "Calendar", icon: CalendarDays },
-    { href: "/landlord/contractors", label: "Contractors", icon: UserCheck },
-    { href: "/landlord/lease", label: "Leases", icon: FileText },
-    { href: "/landlord/settings", label: "Settings", icon: Settings },
+    { href: "/landlord/properties", label: "Properties", icon: Building2 },
+    // Contractors, Leases, Notifications, and Settings live under More (like the phone tabs)
+    {
+      href: "/landlord/more",
+      label: "More",
+      icon: LayoutGrid,
+      also: ["/landlord/contractors", "/landlord/lease", "/landlord/settings", "/landlord/notifications"],
+    },
   ],
 };
 
@@ -37,9 +41,9 @@ const PHONE_LINKS: Record<Role, NavLink[]> = {
   tenant: LINKS.tenant,
   landlord: [
     { href: "/landlord", label: "Requests", icon: Wrench, exact: true },
-    { href: "/landlord/properties", label: "Homes", icon: Building2 },
     { href: "/landlord/messages", label: "Messages", icon: MessageCircle },
     { href: "/landlord/calendar", label: "Calendar", icon: CalendarDays },
+    { href: "/landlord/properties", label: "Homes", icon: Building2 },
     {
       href: "/landlord/more",
       label: "More",
@@ -56,11 +60,14 @@ export default function NavBar() {
   const unreadMessages = useMessageAlerts()?.badge ?? 0;
 
   const links = user ? LINKS[user.role] : [];
+  const landlord = user?.role === "landlord";
   // A request page or the report form still belongs to "Home".
+  const owned = links.some((o) => o.also?.some((a) => pathname.startsWith(a)));
   const isActive = (l: NavLink) =>
-    l.exact
-      ? pathname === l.href || (pathname.startsWith(`${l.href}/`) && !links.some((o) => !o.exact && pathname.startsWith(o.href)))
-      : pathname.startsWith(l.href);
+    !!l.also?.some((a) => pathname.startsWith(a)) ||
+    (l.exact
+      ? pathname === l.href || (pathname.startsWith(`${l.href}/`) && !owned && !links.some((o) => !o.exact && pathname.startsWith(o.href)))
+      : pathname.startsWith(l.href));
 
   // Proposal C: navy bar in both themes. The logo tile and the active-tab marker
   // use the role's bright color (tenant green, landlord baby blue).
@@ -69,11 +76,11 @@ export default function NavBar() {
   return (
     <>
     <header
-      className="sticky top-0 z-40 border-b border-navy-line bg-navy/95 text-white backdrop-blur"
+      className="sticky top-0 z-40 border-b border-navy-line bg-navy/95 pt-[env(safe-area-inset-top)] text-white backdrop-blur"
       data-role={user?.role}
       style={{ "--nav-accent": roleColor } as React.CSSProperties}
     >
-      <nav className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-5 py-2.5 sm:px-8">
+      <nav className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-2 px-5 py-2.5 sm:px-8 lg:gap-x-6">
         <Link
           href={user ? homeFor(user.role) : "/"}
           aria-label={user ? "Tenly, go to your home screen" : "Tenly home"}
@@ -107,7 +114,13 @@ export default function NavBar() {
                   <Link
                     href={l.href}
                     aria-current={active ? "page" : undefined}
-                    className={`flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-lg px-2 text-sm font-medium transition-colors duration-200 sm:flex-row sm:gap-2 sm:px-3 sm:text-[0.95rem] ${links.length > 4 ? "xl:gap-1.5 xl:px-2.5" : ""} ${
+                    className={`flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-lg px-2 text-sm font-medium transition-colors duration-200 ${
+                      // Landlords: small word under the icon on tablets, side by side on wide screens.
+                      // Tenants: side by side from tablets up (the original look).
+                      landlord
+                        ? "min-w-14 py-1 text-[0.8rem] xl:flex-row xl:gap-2 xl:px-3 xl:text-[0.95rem]"
+                        : "sm:flex-row sm:gap-2 sm:px-2 sm:text-[0.95rem] lg:px-3"
+                    } ${
                       active
                         ? "bg-white/10 text-white shadow-[inset_0_-2px_0_var(--nav-accent)]"
                         : "text-white/70 hover:bg-white/10 hover:text-white"
@@ -116,13 +129,12 @@ export default function NavBar() {
                     <span className="relative">
                       <Icon className="size-5 shrink-0" aria-hidden />
                       {l.label === "Messages" && (
-                        <UnreadBadge count={unreadMessages} className={`absolute -top-2 -right-3 ${links.length > 4 ? "xl:hidden" : "sm:hidden"}`} />
+                        <UnreadBadge count={unreadMessages} className={`absolute -top-2 -right-3 ${landlord ? "xl:hidden" : "sm:hidden"}`} />
                       )}
                     </span>
-                    {/* Lots of tabs (landlords): icons only until there's room for words */}
-                    <span className={links.length > 4 ? "max-xl:sr-only" : ""}>{l.label}</span>
+                    <span>{l.label}</span>
                     {l.label === "Messages" && (
-                      <UnreadBadge count={unreadMessages} className={links.length > 4 ? "hidden xl:grid" : "hidden sm:grid"} />
+                      <UnreadBadge count={unreadMessages} className={landlord ? "hidden xl:grid" : "hidden sm:grid"} />
                     )}
                   </Link>
                 </li>
@@ -136,6 +148,9 @@ export default function NavBar() {
             href={`/${user.role}/notifications`}
             aria-label={unread ? `Notifications, ${unread} new` : "Notifications"}
             className={`relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg transition-colors ${
+              // Landlords on computers: Notifications is under More (tablets keep the bell)
+              user.role === "landlord" ? "lg:hidden" : ""
+            } ${
               pathname.startsWith(`/${user.role}/notifications`)
                 ? "bg-white/10 text-white shadow-[inset_0_-2px_0_var(--nav-accent)]"
                 : "text-white/70 hover:bg-white/10 hover:text-white"

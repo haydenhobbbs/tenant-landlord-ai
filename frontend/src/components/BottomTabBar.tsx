@@ -51,7 +51,7 @@ export function BottomTabBar({
     <nav
       aria-label="Main"
       data-role={role}
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 w-full max-w-[100vw] border-t border-line bg-surface/95 pr-[max(0.5rem,env(safe-area-inset-right))] pb-[max(0.85rem,calc(env(safe-area-inset-bottom)+0.35rem))] pl-[max(0.5rem,env(safe-area-inset-left))] backdrop-blur md:hidden"
     >
       <ul className="mx-auto grid max-w-lg" style={{ gridTemplateColumns: `repeat(${links.length}, minmax(0, 1fr))` }}>
         {links.map((t) => {
@@ -70,7 +70,8 @@ export function BottomTabBar({
                   <Icon className="size-[1.4rem]" strokeWidth={active ? 2.4 : 2} aria-hidden />
                   {t.label === "Messages" && <UnreadBadge count={unreadMessages} className="absolute -top-1.5 -right-3" />}
                 </span>
-                {t.label}
+                {/* never wider than its column, so all tabs stay on screen */}
+                <span className="block max-w-full truncate px-0.5">{t.label}</span>
                 <span
                   aria-hidden
                   className={`absolute top-0 h-1 w-10 rounded-b-full transition-colors ${active ? "bg-accent" : "bg-transparent"}`}

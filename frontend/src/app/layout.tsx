@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { Outfit, Rubik } from "next/font/google";
 import { MessageAlertsProvider } from "@/components/MessageAlerts";
@@ -21,6 +21,15 @@ const heading = Outfit({
   subsets: ["latin"],
   weight: ["500", "600", "700"],
 });
+
+// iPhone: let the page reach the screen edges so env(safe-area-inset-*) works.
+// The top bar and bottom tabs pad themselves clear of the notch, home bar and
+// Safari's bottom toolbar (Nermin).
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export const metadata: Metadata = {
   title: "Tenly · Tenant ↔ Landlord AI",

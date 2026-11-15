@@ -29,7 +29,7 @@ const REQUEST_PREFIX = "New repair request:";
 // bottom tabs. The contact header and the message box stay put; only the
 // messages scroll. Wide screens keep the normal page flow.
 export const PHONE_CHAT_PANEL =
-  "max-md:fixed max-md:inset-x-0 max-md:top-[calc(4rem+1px)] max-md:bottom-[calc(3.5rem+1px+max(0.5rem,env(safe-area-inset-bottom)))] max-md:z-30 max-md:flex max-md:flex-col max-md:gap-3 max-md:bg-bg max-md:px-4 max-md:pt-3 max-md:pb-2";
+  "max-md:fixed max-md:inset-x-0 max-md:top-[calc(4rem+1px+env(safe-area-inset-top))] max-md:bottom-[calc(3.5rem+1px+max(0.85rem,calc(env(safe-area-inset-bottom)+0.35rem)))] max-md:z-30 max-md:flex max-md:flex-col max-md:gap-3 max-md:bg-bg max-md:px-4 max-md:pt-3 max-md:pb-2";
 
 export function ChatThread({ tenantId, me, otherName = "them", timeZone, quickReplies = [], requestsHref }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -42,25 +42,42 @@ export function ChatThread({ tenantId, me, otherName = "them", timeZone, quickRe
   const panel = useRef<HTMLDivElement>(null);
 
   // Wider screens: size the chat to end at the bottom of the window, so the
-  // page itself doesn't scroll; only the messages inside do.
+  // page itself doesn't scroll; only the messages inside do. Re-fits whenever
+  // anything above it changes size (contacts loading, banners, text size).
+  // Also shares the height as --chat-h so the landlord contact list can match.
   useEffect(() => {
     const el = panel.current;
     if (!el) return;
+    const root = document.documentElement;
     const wide = window.matchMedia("(width >= 48rem)");
     const fit = () => {
+      // The page stays still on wider screens; only the messages scroll.
+      root.style.overflowY = wide.matches ? "hidden" : "";
       if (!wide.matches) {
         el.style.height = "";
+        root.style.removeProperty("--chat-h");
         return;
       }
-      const top = el.getBoundingClientRect().top + window.scrollY;
-      el.style.height = `${Math.max(320, window.innerHeight - top - 46)}px`;
+      // offsetTop chain: ignores the entrance animation's slide
+      let top = 0;
+      for (let n: HTMLElement | null = el; n; n = n.offsetParent as HTMLElement | null) top += n.offsetTop;
+      // Leave just the page's bottom padding under the chat.
+      const below = 16; // small gap under the chat (not the full page padding)
+      const h = Math.max(240, Math.floor(window.innerHeight - top - below)); // small floor so short laptop screens still fit
+      if (Math.abs(el.offsetHeight - h) > 1) el.style.height = `${h}px`;
+      root.style.setProperty("--chat-h", `${h}px`);
     };
     fit();
+    const watch = new ResizeObserver(() => fit());
+    watch.observe(document.body);
     window.addEventListener("resize", fit);
     wide.addEventListener("change", fit);
     return () => {
+      watch.disconnect();
       window.removeEventListener("resize", fit);
       wide.removeEventListener("change", fit);
+      root.style.removeProperty("--chat-h");
+      root.style.overflowY = "";
     };
   }, []);
 
@@ -153,7 +170,7 @@ export function ChatThread({ tenantId, me, otherName = "them", timeZone, quickRe
 
   return (
     <div ref={panel} className="flex min-h-0 min-w-0 flex-1 flex-col overflow-clip rounded-xl border border-line bg-surface shadow-card md:flex-none">
-      <div className="flex-1 space-y-3 overflow-y-auto p-3 sm:space-y-4 sm:p-6" aria-live="polite">
+      <div className="flex-1 space-y-3 overflow-y-auto overscroll-contain p-3 sm:space-y-4 sm:p-6" aria-live="polite">
         {loaded && messages.length === 0 && (
           <p className="py-10 text-center text-base text-muted sm:text-lg">No messages yet. Say hello to {otherName}.</p>
         )}
@@ -217,7 +234,7 @@ export function ChatThread({ tenantId, me, otherName = "them", timeZone, quickRe
       {/* The message box sits at the bottom of the panel (on phones: right above the tab bar). */}
       <form
         onSubmit={send}
-        className="shrink-0 border-t border-line bg-bg p-3 sm:p-4 md:bg-bg/60"
+        className="shrink-0 border-t border-line bg-bg p-3 sm:p-4 md:bg-bg/60 md:px-3 md:pt-1.5 md:pb-2.5"
       >
         {error && (
           <p role="alert" className="mb-3 rounded-lg bg-danger-soft px-4 py-3 text-base font-medium text-danger-ink">
@@ -225,7 +242,7 @@ export function ChatThread({ tenantId, me, otherName = "them", timeZone, quickRe
           </p>
         )}
         {quickReplies.length > 0 && (
-          <div className="-mx-1 mb-1.5 flex gap-2 overflow-x-auto px-1 py-1 [scrollbar-width:none] sm:mb-2.5">
+          <div className="-mx-1 mb-1.5 flex gap-2 overflow-x-auto px-1 py-1 [scrollbar-width:none] sm:mb-2.5 md:mb-1.5">
             {quickReplies.map((q) => (
               <button
                 key={q}
@@ -237,7 +254,7 @@ export function ChatThread({ tenantId, me, otherName = "them", timeZone, quickRe
                     box.current?.focus();
                   });
                 }}
-                className="min-h-10 shrink-0 cursor-pointer rounded-full bg-surface px-3.5 text-[0.9rem] font-medium sm:min-h-11 sm:px-4 sm:text-base ring-1 ring-line-strong transition-colors hover:bg-accent-soft"
+                className="min-h-10 shrink-0 cursor-pointer rounded-full bg-surface px-3.5 text-[0.9rem] font-medium sm:min-h-11 sm:px-4 sm:text-base md:min-h-9 md:px-3 md:text-[0.9rem] ring-1 ring-line-strong transition-colors hover:bg-accent-soft"
               >
                 {q}
               </button>
@@ -246,7 +263,7 @@ export function ChatThread({ tenantId, me, otherName = "them", timeZone, quickRe
         )}
         {/* iMessage-style: a rounded box that grows as you type, with a round
             arrow button inside it that turns green once there's something to send. */}
-        <div className="flex items-end gap-2 rounded-[1.6rem] border border-line-strong bg-surface py-1.5 pr-1.5 pl-4 transition-colors focus-within:border-accent-edge focus-within:ring-3 focus-within:ring-accent-edge/25">
+        <div className="flex items-end gap-2 rounded-[1.6rem] border border-line-strong bg-surface py-1.5 pr-1.5 pl-4 md:py-1 md:pr-1 transition-colors focus-within:border-accent-edge focus-within:ring-3 focus-within:ring-accent-edge/25">
           <label className="min-w-0 flex-1">
             <span className="sr-only">Message</span>
             <textarea
@@ -265,14 +282,14 @@ export function ChatThread({ tenantId, me, otherName = "them", timeZone, quickRe
               rows={1}
               maxLength={2000}
               placeholder={`Message ${otherName}`}
-              className="block max-h-40 min-h-11 w-full resize-none bg-transparent py-2 text-base leading-snug sm:text-lg text-fg placeholder:text-muted focus:outline-none"
+              className="block max-h-40 min-h-11 w-full resize-none bg-transparent py-2 text-base leading-snug sm:text-lg md:min-h-10 md:py-1.5 md:text-base text-fg placeholder:text-muted focus:outline-none"
             />
           </label>
           <button
             type="submit"
             disabled={sending || !draft.trim()}
             aria-label={sending ? "Sending" : "Send"}
-            className="grid size-11 shrink-0 cursor-pointer place-items-center rounded-full bg-accent text-on-accent transition-[background-color,transform,opacity] duration-200 hover:bg-accent-hover active:scale-95 disabled:cursor-default disabled:bg-line-strong disabled:text-surface disabled:opacity-70"
+            className="grid size-11 shrink-0 md:size-10 cursor-pointer place-items-center rounded-full bg-accent text-on-accent transition-[background-color,transform,opacity] duration-200 hover:bg-accent-hover active:scale-95 disabled:cursor-default disabled:bg-line-strong disabled:text-surface disabled:opacity-70"
           >
             <ArrowUp className="size-6" strokeWidth={2.6} aria-hidden />
           </button>

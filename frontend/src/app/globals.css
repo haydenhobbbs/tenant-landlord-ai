@@ -215,6 +215,9 @@
     /* 18px base: everything sized in rem grows with it. */
     font-size: 112.5%;
     -webkit-text-size-adjust: 100%;
+    /* iPhone Safari: never let anything widen the page, or fixed bars (the
+       bottom tabs) stretch past the screen edge */
+    overflow-x: clip;
   }
 
   body {
