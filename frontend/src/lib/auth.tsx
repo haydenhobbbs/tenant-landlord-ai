@@ -221,7 +221,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     const supabase = getBrowserSupabase();
-    if (supabase) await supabase.auth.signOut();
+    // "local" = sign out this device only. The default ("global") ends the
+    // account's sessions on EVERY device, and the team shares the demo accounts.
+    if (supabase) await supabase.auth.signOut({ scope: "local" });
     writeJSON(DEMO_SESSION, null);
     setUser(null);
   }, []);
