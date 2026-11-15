@@ -28,7 +28,7 @@ const tick = (
 
 const FAQ = [
   ["Does anything get booked without me?", "No. Tenly collects quotes and suggests one, but nothing is booked until you tap Approve."],
-  ["Do my tenants need to download an app?", "No. They report repairs from the browser on any phone, and get updates by text."],
+  ["Do my tenants need to download an app?", "No. Tenants can sign in through a browser or add Tenly to their phone’s Home Screen and use it like an app."],
   ["How does Tenly reach contractors?", "By text or email: your trusted list first, then well-rated pros nearby. They reply with a price and a time."],
   ["Is the legal checklist legal advice?", "No. It’s general information about your state’s rules, with sources, to help you act on time."],
 ];
