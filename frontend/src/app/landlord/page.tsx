@@ -55,7 +55,9 @@ export default function LandlordPage() {
 
   return (
     <div className="space-y-5 sm:space-y-6">
-      <header>
+      {/* Wide screens: the greeting above (LandlordShell) leads; this heading is for phones */}
+      <h2 id="requests" className="hidden scroll-mt-24 text-[1.7rem] leading-tight md:block">Your repair requests</h2>
+      <header className="md:hidden">
         <h1 className="text-[1.6rem] leading-tight font-semibold sm:text-[2rem]">Repair requests</h1>
         <p className="mt-1 text-base text-muted sm:text-lg">Check the contractor, price, and time, then decide.</p>
       </header>
@@ -233,7 +235,7 @@ function NewCard({
         type="button"
         onClick={onFind}
         disabled={busy}
-        className="min-h-12 cursor-pointer rounded-lg bg-accent px-3 text-base font-bold text-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 sm:text-lg"
+        className="min-h-12 cursor-pointer rounded-lg bg-accent px-3 text-base font-bold text-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 sm:text-lg md:min-h-[3.6rem] md:font-semibold"
       >
         {saving ? "Sending…" : "Have the AI contact a contractor"}
       </button>
@@ -304,7 +306,7 @@ function PendingCard({
           type="button"
           onClick={onApprove}
           disabled={busy || !top}
-          className="min-h-12 cursor-pointer rounded-lg bg-accent px-3 text-base font-bold sm:min-h-13 sm:text-lg text-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+          className="min-h-12 cursor-pointer rounded-lg bg-accent px-3 text-base font-bold sm:min-h-13 sm:text-lg text-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 md:min-h-[3.6rem] md:font-semibold"
         >
           {saving ? "Saving…" : "Approve"}
         </button>
@@ -312,7 +314,7 @@ function PendingCard({
           type="button"
           onClick={onDecline}
           disabled={busy}
-          className="min-h-12 cursor-pointer rounded-lg px-3 text-base font-bold text-fg sm:min-h-13 sm:text-lg ring-1 ring-line-strong hover:bg-sunken disabled:cursor-not-allowed disabled:opacity-60"
+          className="min-h-12 cursor-pointer rounded-lg px-3 text-base font-bold text-fg sm:min-h-13 sm:text-lg ring-1 ring-line-strong hover:bg-sunken disabled:cursor-not-allowed disabled:opacity-60 md:min-h-[3.6rem] md:font-semibold"
         >
           Decline
         </button>

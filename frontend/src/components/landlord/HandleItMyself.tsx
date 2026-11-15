@@ -76,7 +76,7 @@ export function HandleItMyself({ requestId, tenantName, onDone }: { requestId: s
       </label>
       {error && <p role="alert" className="rounded-lg bg-danger-soft p-3 text-danger-ink">{error}</p>}
       <div className="flex flex-wrap gap-2">
-        <button type="submit" disabled={busy} className="min-h-12 rounded-lg bg-accent px-5 font-bold text-on-accent hover:bg-accent-hover disabled:opacity-60">
+        <button type="submit" disabled={busy} className="min-h-12 rounded-lg bg-accent px-5 font-bold text-on-accent hover:bg-accent-hover disabled:opacity-60 md:min-h-[3.6rem] md:px-7 md:text-lg md:font-semibold">
           {busy ? "Saving…" : "Yes, I'll handle it"}
         </button>
         <button type="button" onClick={() => setOpen(false)} className="min-h-12 rounded-lg border border-line-strong px-5 font-semibold">
